@@ -7,63 +7,23 @@
         {
             "pitch_midi": 60,
             "onset_seconds": 0.0,
-            "duration_seconds": 0.5,
-            "velocity": 0.8,
-            "confidence": 1.0,
-            "staff_hint": "treble"
-        },
-        {
-            "pitch_midi": 62,
-            "onset_seconds": 0.5,
-            "duration_seconds": 0.5,
+            "duration_seconds": 2.0,
             "velocity": 0.8,
             "confidence": 1.0,
             "staff_hint": "treble"
         },
         {
             "pitch_midi": 64,
-            "onset_seconds": 1.0,
-            "duration_seconds": 0.5,
-            "velocity": 0.8,
-            "confidence": 1.0,
-            "staff_hint": "treble"
-        },
-        {
-            "pitch_midi": 65,
-            "onset_seconds": 1.5,
-            "duration_seconds": 0.5,
+            "onset_seconds": 0.0,
+            "duration_seconds": 2.0,
             "velocity": 0.8,
             "confidence": 1.0,
             "staff_hint": "treble"
         },
         {
             "pitch_midi": 67,
-            "onset_seconds": 2.0,
-            "duration_seconds": 0.5,
-            "velocity": 0.8,
-            "confidence": 1.0,
-            "staff_hint": "treble"
-        },
-        {
-            "pitch_midi": 69,
-            "onset_seconds": 2.5,
-            "duration_seconds": 0.5,
-            "velocity": 0.8,
-            "confidence": 1.0,
-            "staff_hint": "treble"
-        },
-        {
-            "pitch_midi": 71,
-            "onset_seconds": 3.0,
-            "duration_seconds": 0.5,
-            "velocity": 0.8,
-            "confidence": 1.0,
-            "staff_hint": "treble"
-        },
-        {
-            "pitch_midi": 72,
-            "onset_seconds": 3.5,
-            "duration_seconds": 0.5,
+            "onset_seconds": 0.0,
+            "duration_seconds": 2.0,
             "velocity": 0.8,
             "confidence": 1.0,
             "staff_hint": "treble"

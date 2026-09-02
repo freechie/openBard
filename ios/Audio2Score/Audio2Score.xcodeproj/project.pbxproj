@@ -33,6 +33,7 @@
 		7F4D2FA22FFEB8FC0070E90D /* Exceptions for "Audio2Score" folder in "Audio2ScoreTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"c-major-chord.wav",
 				transcription.example.json,
 			);
 			target = 7F4D2F7B2FFE08270070E90D /* Audio2ScoreTests */;

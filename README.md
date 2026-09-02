@@ -3,9 +3,10 @@
 Audio2Score is an experimental iOS app for turning recorded or imported music
 into editable note data and, eventually, readable sheet music.
 
-> **Status:** Early prototype. The JSON contract, demo FastAPI worker, and iOS
-> decoding path work. Real audio transcription, note rendering, and export are
-> not implemented yet.
+> **Status:** Early prototype. The JSON contract, bundled C major chord WAV,
+> demo FastAPI worker, iOS playback/import, and piano-roll preview work. Real
+> audio transcription and export are not implemented yet. The worker still
+> returns the hardcoded chord when a file is uploaded.
 
 ## Product direction
 
@@ -163,6 +164,7 @@ A public App Store build requires all of the following:
 
 ```text
 contracts/  Shared JSON schema and example transcription
+fixtures/   Bundled C major chord WAV
 ios/        SwiftUI application and iOS tests
 worker/     FastAPI worker, engine adapters, and Python tests
 TODO.md     Pointer to the active roadmap and immediate task
@@ -195,13 +197,24 @@ Run the complete repository verification on macOS with Xcode installed:
 
 This checks the locked Python environment, worker tests, dependency advisories,
 and static analysis, then compiles the iOS app and test bundles without code
-signing. Running the iOS tests still requires an installed simulator runtime or
-a configured development profile.
+signing. GitHub Actions runs the same command on `macos-26`. Running the iOS
+tests still requires an installed simulator runtime or a configured
+development profile.
+
+## License
+
+The application code and the synthesized `fixtures/c-major-chord.wav` are MIT.
+See [LICENSE](LICENSE). Candidate transcription engines keep their own terms
+under [Model and licensing policy](#model-and-licensing-policy). This is a
+personal prototype; do not assume pull requests are reviewed.
 
 The current endpoints are:
 
 - `GET /health`
 - `GET /v1/transcriptions/demo`
+- `GET /v1/audio/demo`
+- `POST /v1/transcriptions` (multipart file field `audio`; fake engine still
+  returns the bundled C major chord)
 
 ### iOS app
 
@@ -211,8 +224,10 @@ Open the project in Xcode:
 open ios/Audio2Score/Audio2Score.xcodeproj
 ```
 
-The app currently loads `transcription.example.json` from its bundle and shows
-the engine, key, tempo, and note count.
+The app loads `transcription.example.json` and `c-major-chord.wav` from its
+bundle. It shows engine, key, tempo, note count, a piano roll of the C–E–G
+chord, playback of the demo WAV, and import of a user audio file for playback
+only.
 
 ## Open decisions
 

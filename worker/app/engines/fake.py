@@ -1,19 +1,19 @@
 from app.models import NoteEvent, TranscriptionResult
 
+C_MAJOR_CHORD_PITCHES = (60, 64, 67)
+
 
 def build_demo_transcription() -> TranscriptionResult:
-    pitches = [60, 62, 64, 65, 67, 69, 71, 72]
-
     notes = [
         NoteEvent(
             pitch_midi=pitch,
-            onset_seconds=index * 0.5,
-            duration_seconds=0.5,
+            onset_seconds=0.0,
+            duration_seconds=2.0,
             velocity=0.8,
             confidence=1.0,
             staff_hint="treble",
         )
-        for index, pitch in enumerate(pitches)
+        for pitch in C_MAJOR_CHORD_PITCHES
     ]
     return TranscriptionResult(
         engine="dsp_v0",
