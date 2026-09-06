@@ -1,0 +1,304 @@
+{
+  "engine": "synthetic",
+  "engine_version": "1.0.0",
+  "tempo_bpm": 120.0,
+  "key_guess": "C major",
+  "note_events": [
+    {
+      "pitch_midi": 48,
+      "onset_seconds": 0.0,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 60,
+      "onset_seconds": 0.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.7,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 64,
+      "onset_seconds": 0.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.7,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 50,
+      "onset_seconds": 0.5,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 52,
+      "onset_seconds": 1.0,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 53,
+      "onset_seconds": 1.5,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 43,
+      "onset_seconds": 2.0,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 55,
+      "onset_seconds": 2.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.65,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 59,
+      "onset_seconds": 2.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.65,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 45,
+      "onset_seconds": 2.5,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 47,
+      "onset_seconds": 3.0,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 50,
+      "onset_seconds": 3.5,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 45,
+      "onset_seconds": 4.0,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 57,
+      "onset_seconds": 4.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.7,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 60,
+      "onset_seconds": 4.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.7,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 48,
+      "onset_seconds": 4.5,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 50,
+      "onset_seconds": 5.0,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 52,
+      "onset_seconds": 5.5,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 41,
+      "onset_seconds": 6.0,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 53,
+      "onset_seconds": 6.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.65,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 57,
+      "onset_seconds": 6.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.65,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 43,
+      "onset_seconds": 6.5,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 45,
+      "onset_seconds": 7.0,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 48,
+      "onset_seconds": 7.5,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 48,
+      "onset_seconds": 8.0,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 60,
+      "onset_seconds": 8.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.7,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 64,
+      "onset_seconds": 8.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.7,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 50,
+      "onset_seconds": 8.5,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 52,
+      "onset_seconds": 9.0,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 53,
+      "onset_seconds": 9.5,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 43,
+      "onset_seconds": 10.0,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 55,
+      "onset_seconds": 10.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.75,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 59,
+      "onset_seconds": 10.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.75,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 62,
+      "onset_seconds": 10.0,
+      "duration_seconds": 2.0,
+      "velocity": 0.75,
+      "confidence": 1.0,
+      "staff_hint": "treble"
+    },
+    {
+      "pitch_midi": 45,
+      "onset_seconds": 10.5,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 47,
+      "onset_seconds": 11.0,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    },
+    {
+      "pitch_midi": 50,
+      "onset_seconds": 11.5,
+      "duration_seconds": 0.5,
+      "velocity": 0.6,
+      "confidence": 1.0,
+      "staff_hint": "bass"
+    }
+  ]
+}
