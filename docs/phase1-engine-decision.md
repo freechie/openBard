@@ -175,6 +175,18 @@ MuScriptor remains valuable for evaluating multi-instrument transcription:
 5. **Update tests** to validate real transcription output
 6. **Document known limitations** (solo/isolated instruments only)
 
+### Beyond Phase 2: Honest UI and Tight Edit Loop
+
+The sharpened product strategy (see README) shifts focus from "perfect 
+first-pass transcription" to **accuracy users can trust and fix fast**. 
+Phase 2 will extend the contract to expose confidence scores and onset 
+uncertainty, build an interactive piano-roll editor with split/merge/nudge 
+tools, and introduce fixture-backed CI evaluation to prevent accuracy regression.
+
+This decision doc validates that Basic Pitch meets the technical requirements. 
+The updated roadmap (README Phase 2+) defines how that transcription capability 
+becomes a complete user workflow.
+
 ## Appendix: Evaluation Artifacts
 
 All fixtures, evaluation scripts, and results are committed to the repository:
