@@ -2,13 +2,14 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
-    private let transcription: TranscriptionResult?
+    @State private var transcription: TranscriptionResult?
     @StateObject private var audioPlayer = DemoAudioPlayer()
     @State private var isImporterPresented = false
     @State private var playbackError: String?
+    @State private var selectedFixture: AudioFixture = .cMajorChord
 
     init() {
-        transcription = try? TranscriptionLoader.loadDemo()
+        _transcription = State(initialValue: try? TranscriptionLoader.loadDemo())
     }
 
     var body: some View {
@@ -28,10 +29,27 @@ struct ContentView: View {
 
                 PianoRollView(notes: transcription.noteEvents)
                     .frame(minHeight: 140)
+                
+                VStack(spacing: 8) {
+                    Text("Bundled Fixtures")
+                        .font(.headline)
+                    
+                    Picker("Select Audio", selection: $selectedFixture) {
+                        ForEach(AudioFixture.allCases) { fixture in
+                            Text(fixture.rawValue).tag(fixture)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("fixture-picker")
+                    .onChange(of: selectedFixture) { _, newFixture in
+                        loadFixture(newFixture)
+                    }
+                }
+                .padding(.vertical, 4)
 
                 HStack {
-                    Button(audioPlayer.isPlaying ? "Stop" : "Play demo audio") {
-                        toggleDemoPlayback()
+                    Button(audioPlayer.isPlaying ? "Stop" : "Play") {
+                        togglePlayback()
                     }
                     .accessibilityIdentifier("play-demo-audio")
 
@@ -62,17 +80,30 @@ struct ContentView: View {
         }
     }
 
-    private func toggleDemoPlayback() {
+    private func loadFixture(_ fixture: AudioFixture) {
+        playbackError = nil
+        
+        do {
+            let url = try TranscriptionLoader.fixtureAudioURL(fixture)
+            try audioPlayer.play(url: url, name: "\(fixture.rawValue).wav")
+            
+            if let fixtureTranscription = try TranscriptionLoader.loadFixture(fixture) {
+                transcription = fixtureTranscription
+            } else {
+                transcription = try TranscriptionLoader.loadDemo()
+            }
+        } catch {
+            playbackError = "Could not load fixture: \(fixture.rawValue)"
+        }
+    }
+
+    private func togglePlayback() {
         playbackError = nil
         if audioPlayer.isPlaying {
             audioPlayer.stop()
             return
         }
-        do {
-            try audioPlayer.playDemo()
-        } catch {
-            playbackError = "Could not play demo audio"
-        }
+        loadFixture(selectedFixture)
     }
 
     private func importAudio(_ result: Result<[URL], Error>) {
