@@ -5,8 +5,7 @@ struct PianoRollView: View {
 
     var body: some View {
         Canvas { context, size in
-            let frames = PianoRollLayout.frames(notes: notes, in: size)
-            for frame in frames {
+            for frame in PianoRollLayout.frames(notes: notes, in: size) {
                 let path = Path(roundedRect: frame, cornerRadius: 3)
                 context.fill(path, with: .color(.accentColor.opacity(0.85)))
             }
@@ -23,8 +22,8 @@ struct PianoRollView: View {
 
     @ViewBuilder
     private var pitchLabels: some View {
-        let pitches = PianoRollLayout.pitchRange(notes: notes)
-        if let minPitch = pitches.min, let maxPitch = pitches.max {
+        if let minPitch = notes.map(\.pitchMidi).min(),
+           let maxPitch = notes.map(\.pitchMidi).max() {
             let span = max(CGFloat(maxPitch - minPitch), 1)
             GeometryReader { geometry in
                 ForEach(notes) { note in
@@ -44,18 +43,6 @@ struct PianoRollView: View {
 }
 
 enum PianoRollLayout {
-    struct PitchRange {
-        var min: Int?
-        var max: Int?
-    }
-
-    static func pitchRange(notes: [NoteEvent]) -> PitchRange {
-        PitchRange(
-            min: notes.map(\.pitchMidi).min(),
-            max: notes.map(\.pitchMidi).max()
-        )
-    }
-
     static func pitchName(midi: Int) -> String {
         let names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
         let name = names[((midi % 12) + 12) % 12]
@@ -64,9 +51,10 @@ enum PianoRollLayout {
     }
 
     static func frames(notes: [NoteEvent], in size: CGSize) -> [CGRect] {
-        guard let minPitch = notes.map(\.pitchMidi).min(),
-              let maxPitch = notes.map(\.pitchMidi).max()
-        else {
+        guard !notes.isEmpty else { return [] }
+
+        let pitches = notes.map(\.pitchMidi)
+        guard let minPitch = pitches.min(), let maxPitch = pitches.max() else {
             return []
         }
 

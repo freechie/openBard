@@ -36,8 +36,7 @@ def demo_audio() -> FileResponse:
 
 @app.post("/v1/transcriptions", response_model=TranscriptionResult)
 async def transcribe_audio(audio: UploadFile = File(...)) -> TranscriptionResult:
-    filename = audio.filename or ""
-    suffix = Path(filename).suffix.lower()
+    suffix = Path(audio.filename or "").suffix.lower()
     if suffix not in ALLOWED_AUDIO_SUFFIXES:
         raise HTTPException(status_code=400, detail="Unsupported audio type")
     await audio.read()

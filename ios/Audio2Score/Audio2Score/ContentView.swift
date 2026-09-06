@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  Audio2Score
-//
-//  Created by richie on 7/8/26.
-//
-
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -84,27 +77,25 @@ struct ContentView: View {
 
     private func importAudio(_ result: Result<[URL], Error>) {
         playbackError = nil
-        switch result {
-        case .failure:
+        guard case .success(let urls) = result, let url = urls.first else {
             playbackError = "Could not import audio"
-        case .success(let urls):
-            guard let url = urls.first else {
-                return
+            return
+        }
+
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessed {
+                url.stopAccessingSecurityScopedResource()
             }
-            let accessed = url.startAccessingSecurityScopedResource()
-            defer {
-                if accessed {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-            do {
-                let destination = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("a2s-import-\(UUID().uuidString)-\(url.lastPathComponent)")
-                try FileManager.default.copyItem(at: url, to: destination)
-                try audioPlayer.play(url: destination, name: url.lastPathComponent)
-            } catch {
-                playbackError = "Could not play imported audio"
-            }
+        }
+
+        do {
+            let destination = FileManager.default.temporaryDirectory
+                .appendingPathComponent("a2s-import-\(UUID().uuidString)-\(url.lastPathComponent)")
+            try FileManager.default.copyItem(at: url, to: destination)
+            try audioPlayer.play(url: destination, name: url.lastPathComponent)
+        } catch {
+            playbackError = "Could not play imported audio"
         }
     }
 }

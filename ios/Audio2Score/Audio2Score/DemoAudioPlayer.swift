@@ -1,5 +1,4 @@
 import AVFoundation
-import Combine
 import Foundation
 
 @MainActor
@@ -15,14 +14,17 @@ final class DemoAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     func play(url: URL, name: String) throws {
         stop()
-        try AVAudioSession.sharedInstance().setCategory(.playback)
-        try AVAudioSession.sharedInstance().setActive(true)
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playback)
+        try session.setActive(true)
+        
         let audioPlayer = try AVAudioPlayer(contentsOf: url)
         audioPlayer.delegate = self
         audioPlayer.prepareToPlay()
         guard audioPlayer.play() else {
             throw PlaybackError.failedToStart
         }
+        
         player = audioPlayer
         sourceName = name
         isPlaying = true

@@ -1,10 +1,3 @@
-//
-//  TranscriptionModels.swift
-//  Audio2Score
-//
-//  Created by richie on 7/8/26.
-//
-
 import Foundation
 
 struct TranscriptionResult: Decodable {
