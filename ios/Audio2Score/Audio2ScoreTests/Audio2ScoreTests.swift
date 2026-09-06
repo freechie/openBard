@@ -1,10 +1,3 @@
-//
-//  Audio2ScoreTests.swift
-//  Audio2ScoreTests
-//
-//  Created by richie on 7/8/26.
-//
-
 import CoreGraphics
 import Foundation
 import Testing
