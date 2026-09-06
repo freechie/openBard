@@ -27,6 +27,33 @@ struct Audio2ScoreTests {
         #expect(url.lastPathComponent == "c-major-chord.wav")
         #expect(data.starts(with: Data("RIFF".utf8)))
     }
+    
+    @Test func fixtureAudioIsBundled() throws {
+        let bundle = Bundle(for: TestBundleMarker.self)
+        
+        for fixture in AudioFixture.allCases {
+            let url = try TranscriptionLoader.fixtureAudioURL(fixture, from: bundle)
+            let data = try Data(contentsOf: url)
+            
+            #expect(url.lastPathComponent.hasSuffix(".wav"))
+            #expect(data.starts(with: Data("RIFF".utf8)))
+        }
+    }
+    
+    @Test func fixtureGroundTruthLoads() throws {
+        let bundle = Bundle(for: TestBundleMarker.self)
+        
+        let isolatedPianoTranscription = try TranscriptionLoader.loadFixture(.isolatedPiano, from: bundle)
+        #expect(isolatedPianoTranscription != nil)
+        #expect(isolatedPianoTranscription?.noteEvents.count == 12)
+        
+        let mixedTranscription = try TranscriptionLoader.loadFixture(.mixedArrangement, from: bundle)
+        #expect(mixedTranscription != nil)
+        #expect(mixedTranscription?.noteEvents.count == 32)
+        
+        let cMajorTranscription = try TranscriptionLoader.loadFixture(.cMajorChord, from: bundle)
+        #expect(cMajorTranscription == nil)
+    }
 
     @Test func pianoRollStacksChordNotes() {
         let notes = [
