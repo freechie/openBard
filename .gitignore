@@ -328,3 +328,5 @@ iOSInjectionProject/
 *.swn
 Session.vim
 .nvim.lua
+
+.cursor/
