@@ -1,0 +1,170 @@
+{
+  "fixture": "isolated-piano.wav",
+  "engine": "basic-pitch",
+  "timestamp": "2026-09-06 12:07:56 UTC",
+  "performance": {
+    "latency_seconds": 0.514,
+    "memory_mb": 714.5,
+    "memory_delta_mb": 26.8
+  },
+  "accuracy": {
+    "total_ground_truth": 12,
+    "total_predicted": 21,
+    "matched_notes": 12,
+    "matched_pitches": 12,
+    "precision": 0.571,
+    "recall": 1.0,
+    "f1_score": 0.727,
+    "spurious_long_notes": [],
+    "missed_notes": []
+  },
+  "predicted_notes": [
+    {
+      "pitch_midi": 60,
+      "onset_seconds": 7.503897052154195,
+      "duration_seconds": 2.427769160997731,
+      "velocity": 0.005788160590674933,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 57,
+      "onset_seconds": 7.503897052154195,
+      "duration_seconds": 2.427769160997731,
+      "velocity": 0.006416127907009576,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 53,
+      "onset_seconds": 7.503897052154195,
+      "duration_seconds": 2.427769160997731,
+      "velocity": 0.006127962915916142,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 72,
+      "onset_seconds": 7.492287074829932,
+      "duration_seconds": 0.5237328798185938,
+      "velocity": 0.0030157828894187147,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 72,
+      "onset_seconds": 5.006468027210884,
+      "duration_seconds": 1.2087215419501138,
+      "velocity": 0.0026095516569032444,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 64,
+      "onset_seconds": 5.006468027210884,
+      "duration_seconds": 2.474209070294785,
+      "velocity": 0.00526569818887185,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 60,
+      "onset_seconds": 5.006468027210884,
+      "duration_seconds": 2.497429024943311,
+      "velocity": 0.005440574462019552,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 57,
+      "onset_seconds": 5.006468027210884,
+      "duration_seconds": 2.497429024943311,
+      "velocity": 0.006005685160479207,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 74,
+      "onset_seconds": 2.4974290249433104,
+      "duration_seconds": 0.46439909297052173,
+      "velocity": 0.0028510717895087294,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 62,
+      "onset_seconds": 2.4974290249433104,
+      "duration_seconds": 2.485819047619048,
+      "velocity": 0.005682277867174524,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 55,
+      "onset_seconds": 2.4974290249433104,
+      "duration_seconds": 2.485819047619048,
+      "velocity": 0.005972261034597562,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 59,
+      "onset_seconds": 2.4858190476190476,
+      "duration_seconds": 2.497429024943311,
+      "velocity": 0.006180116041438786,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 64,
+      "onset_seconds": 0.011609977324263039,
+      "duration_seconds": 2.4625990929705215,
+      "velocity": 0.006274932482111173,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 60,
+      "onset_seconds": 0.011609977324263039,
+      "duration_seconds": 2.4509891156462587,
+      "velocity": 0.006006184525377168,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 67,
+      "onset_seconds": 0.011609977324263039,
+      "duration_seconds": 2.497429024943311,
+      "velocity": 0.005659778287091593,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 79,
+      "onset_seconds": 0.011609977324263039,
+      "duration_seconds": 0.313469387755102,
+      "velocity": 0.0030582117752766045,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 72,
+      "onset_seconds": 8.561688888888888,
+      "duration_seconds": 1.1145578231292514,
+      "velocity": 0.0028242745737391195,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 79,
+      "onset_seconds": 0.8126984126984127,
+      "duration_seconds": 0.5921088435374149,
+      "velocity": 0.002897334380412665,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 74,
+      "onset_seconds": 3.519107029478458,
+      "duration_seconds": 0.8488122448979594,
+      "velocity": 0.002908522453833753,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 79,
+      "onset_seconds": 2.033029931972789,
+      "duration_seconds": 0.38312925170068013,
+      "velocity": 0.002669726300427294,
+      "confidence": 1.0
+    },
+    {
+      "pitch_midi": 86,
+      "onset_seconds": 0.023219954648526078,
+      "duration_seconds": 0.23219954648526078,
+      "velocity": 0.0023706076652046265,
+      "confidence": 1.0
+    }
+  ]
+}
