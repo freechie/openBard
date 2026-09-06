@@ -10,39 +10,79 @@ into editable note data and, eventually, readable sheet music.
 
 ## Product direction
 
-The publishable first version will prioritize **solo or isolated pitched
-instruments**, including polyphonic playing such as piano or guitar chords. It
-should run transcription on the device where practical, avoiding recurring
-server costs and keeping users' recordings private.
+Audio2Score aims to produce **accurate transcription of one or more instruments** 
+from audio files, MIDI files, or on-device live recording. If capturing multiple 
+sources for notation proves difficult, the app will isolate a single instrument 
+and build an editable notation file from that.
 
-Full-song, multi-instrument transcription remains an important research track.
-The first experiment will evaluate whether a user can:
+**Must be compatible with other notation software:** MIDI and MusicXML export 
+are first-class features, not afterthoughts.
 
-- transcribe all detected instruments;
-- focus on a known instrument;
-- derive a monophonic main, top, or bass line from the selected part.
+The publishable first version prioritizes **solo or isolated pitched instruments**, 
+including polyphonic playing such as piano or guitar chords. All transcription 
+runs on-device where practical, avoiding recurring server costs and keeping 
+users' recordings private.
 
-The project will not promise publication-ready notation directly from arbitrary
-commercial recordings. Raw note detection and score construction are separate
+Full-song, multi-instrument transcription remains an important research track. 
+The project will not promise publication-ready notation directly from arbitrary 
+commercial recordings. Raw note detection and score construction are separate 
 problems and will be built and evaluated separately.
+
+## Competitive edge: accuracy you can trust and fix fast
+
+Audio2Score's edge is **not** a bigger cloud model. It is **accuracy the user 
+can trust and fix quickly, all on-device**.
+
+### MVP accuracy strategy
+
+1. **Constrain the problem.** Short clips, one clear instrument, guided 
+   recording with real-time gain/noise/clipping meters so the transcription 
+   engine receives clean input.
+
+2. **Ensemble of small on-device models tuned per instrument** (piano, guitar, 
+   strings) rather than one generic network. Basic Pitch remains the Phase 1 
+   MVP candidate; adapter architecture supports swapping or blending models.
+
+3. **Honest UI before quantization.** Show confidence scores, onset uncertainty, 
+   and "possible octave/harmonic" flags directly on the piano roll *before* any 
+   quantization or ScoreBuilder pass. Users see what the model actually detected, 
+   not an over-confident guess.
+
+4. **Tight edit loop.** Tap to split, merge, or nudge notes in the piano roll, 
+   then lock confirmed notes → ScoreBuilder → staff. Fast iteration beats 
+   perfect first-pass transcription.
+
+5. **Fixture-backed evaluation in CI.** Every model change proves recall and 
+   spurious-note rates on known chords and scales. No regression in accuracy 
+   without explicit acknowledgment.
+
+This strategy shifts the product's value from "magical one-click transcription" 
+to "fast, inspectable, correctable workflow."
 
 ## Scope
 
 ### Publishable MVP
 
-- Import or record a short solo or isolated instrument performance.
-- Detect simultaneous notes, onsets, and durations.
-- Display the result first as an honest, unquantized piano roll.
-- Convert validated results into a simple staff preview.
-- Export MIDI; add MusicXML when score construction is reliable.
+- Import or record a short solo or isolated instrument performance with guided 
+  recording (gain/noise/clipping meters).
+- Detect simultaneous notes, onsets, and durations using a small on-device 
+  model (Basic Pitch as Phase 1 candidate).
+- Display raw transcription results as an **honest, unquantized piano roll** 
+  with confidence scores, onset uncertainty, and harmonic/octave flags visible.
+- **Tight edit loop:** tap to split, merge, or nudge notes; lock confirmed 
+  events.
+- Convert validated note events into a simple staff preview via ScoreBuilder.
+- Export MIDI and MusicXML for use in other notation software.
+- **Fixture-backed CI evaluation** proving recall/spurious-note rates on known 
+  test fixtures.
 
 ### Research track
 
 - Transcribe realistic multi-instrument mixes.
-- Preserve instrument labels when the engine supplies them reliably.
-- Compare full transcription with instrument-conditioned transcription.
-- Keep experimental model code behind an adapter so it cannot lock the app to
-  one engine.
+- Evaluate instrument-conditioned transcription (MuScriptor).
+- Ensemble or blend small per-instrument models.
+- Keep experimental model code behind adapters so the app is not locked to one 
+  engine.
 
 ### Not in the first release
 
@@ -55,23 +95,28 @@ problems and will be built and evaluated separately.
 
 ```mermaid
 flowchart LR
-    A["Audio input"] --> B["Transcriber adapter"]
-    B --> C["Raw note events"]
-    C --> D["Piano-roll preview"]
-    C --> E["ScoreBuilder"]
-    E --> F["Staff preview"]
-    E --> G["MIDI / MusicXML"]
+    A["Audio input + recording meters"] --> B["Transcriber adapter"]
+    B --> C["Raw note events + confidence"]
+    C --> D["Piano-roll editor"]
+    D --> E["Validated note events"]
+    E --> F["ScoreBuilder"]
+    F --> G["Staff preview"]
+    F --> H["MIDI / MusicXML export"]
 ```
 
-The transcription result represents what was heard in seconds. `ScoreBuilder`
-will later estimate beats and measures, quantize durations, assign voices, and
-create rests and ties. This boundary prevents model output from being mistaken
-for finished notation.
+The transcription result represents what was heard, in seconds, with **confidence 
+scores and onset uncertainty intact**. The piano-roll editor shows these 
+confidence signals and lets users split, merge, or nudge notes before locking 
+them. Only then does `ScoreBuilder` estimate beats and measures, quantize 
+durations, assign voices, and create rests and ties.
 
-Model-specific dependencies and output mapping belong behind a small
-transcriber interface. A plugin framework, model microservice, background job
-system, and source-separation stage will only be introduced when measurements
-show that they are necessary.
+This boundary prevents model output from being mistaken for finished notation 
+and keeps the user in control of accuracy.
+
+Model-specific dependencies and output mapping belong behind a small transcriber 
+interface. Small per-instrument models can be loaded selectively. A plugin 
+framework, model microservice, background job system, and source-separation 
+stage will only be introduced when measurements show that they are necessary.
 
 ## Roadmap
 
@@ -82,58 +127,76 @@ show that they are necessary.
 - [x] Test the worker, fake engine, and schema contract.
 - [x] Create the SwiftUI app and decode a bundled demo transcription.
 
-### Phase 1 — Feasibility and engine decision (next, 2–3 days)
+### Phase 1 — Feasibility and engine decision (complete)
 
-- [ ] Send MuScriptor's authors a written request covering a free, ad-free
-  personal App Store release and possible future monetization. Author response
-  time is outside the estimate.
-- [ ] Create two legally usable 10–20 second fixtures: one isolated polyphonic
-  instrument and one small mixed arrangement with known notes.
-- [ ] Evaluate Basic Pitch on the isolated fixture.
-- [ ] Evaluate MuScriptor locally on the mixed fixture, both unconditioned and
-  conditioned on a known instrument; record accuracy, latency, peak memory,
-  model size, and manual correction effort.
-- [ ] Select a publishable engine and record the decision. "Solo/isolated only"
-  is a valid outcome.
+- [x] Create two legally usable 10–20 second fixtures: isolated polyphonic 
+  instrument and small mixed arrangement with known notes.
+- [x] Evaluate Basic Pitch on the isolated fixture.
+- [x] Evaluate MuScriptor availability and licensing constraints for research 
+  track.
+- [x] Select Basic Pitch for publishable MVP; document decision in 
+  `docs/phase1-engine-decision.md`.
 
-Acceptance criteria:
+**Outcome:** Basic Pitch meets all acceptance criteria for isolated/solo 
+instruments. 100% recall, sub-second latency, Apache 2.0 license. MuScriptor 
+remains research-track for multi-instrument evaluation.
 
-- The isolated fixture recovers every expected chord pitch within 100 ms of its
-  onset, without a long spurious note.
-- Focused output materially reduces unwanted notes compared with the full mix.
-- No adapter invents unavailable tempo, key, velocity, or confidence values.
-- Runtime and licensing are acceptable for the intended release path.
+### Phase 2 — Honest piano roll and tight edit loop
 
-### Phase 2 — First real vertical slice (3–5 days)
-
-- [ ] Put the selected engine behind a `Transcriber` adapter.
-- [ ] Process one bundled audio fixture instead of returning hardcoded notes.
-- [ ] Make only the contract changes justified by observed model output.
-- [ ] Render pitch, onset, duration, and overlap in a piano roll.
+- [ ] Put Basic Pitch behind a `Transcriber` adapter.
+- [ ] Process bundled fixture instead of returning hardcoded notes.
+- [ ] Extend contract to capture confidence scores and onset uncertainty from 
+  model output (do not invent data the model does not provide).
+- [ ] Render pitch, onset, duration, overlap, **and confidence/uncertainty 
+  flags** in an interactive piano roll.
+- [ ] Implement tap-to-split, tap-to-merge, drag-to-nudge note editing.
+- [ ] Add "lock notes" action that freezes validated events for ScoreBuilder.
 - [ ] Cover success, loading, cancellation, and failure states with tests.
+- [ ] Add fixture-backed evaluation to CI: prove recall and spurious-note rates 
+  on `isolated-piano.wav` and one additional test fixture.
 
-Acceptance criteria: one action processes real audio and produces a visual
-result whose notes can be compared with the known fixture.
+Acceptance criteria: user loads real audio, sees honest confidence visualization, 
+edits notes, locks them, and the locked events match known ground truth within 
+tolerance.
 
-### Phase 3 — Score construction (1–2 weeks)
+### Phase 3 — ScoreBuilder and export interop
 
-- [ ] Estimate tempo and beat positions independently from note transcription.
-- [ ] Quantize notes into measures while preserving simultaneous notes as
-  chords.
+- [ ] Estimate tempo and beat positions independently from locked note events 
+  (not raw transcription).
+- [ ] Quantize notes into measures while preserving simultaneous notes as chords.
 - [ ] Generate rests, ties, clefs, and simple voice assignments.
 - [ ] Render a deterministic staff preview for known rhythmic fixtures.
-- [ ] Export MIDI and validate MusicXML in at least one notation application.
+- [ ] Export MIDI and validate in at least one external DAW or notation app.
+- [ ] Export MusicXML and validate correct import in MuseScore, Finale, or 
+  Sibelius.
+- [ ] Document export limitations and known edge cases.
 
-### Phase 4 — User-file MVP and App Store preparation (1–2 weeks)
+Acceptance criteria: locked piano-roll events → staff notation → MIDI/MusicXML 
+that opens correctly in external software.
 
-- [ ] Add audio recording and file selection with duration and size limits.
-- [ ] Keep publishable MVP inference on-device unless a sustainable backend is
-  justified.
+### Phase 4 — Guided recording and user-file MVP
+
+- [ ] Add live audio recording with real-time gain, noise floor, and clipping 
+  meters.
+- [ ] Guide users to produce clean input (visual feedback, recording tips).
+- [ ] Add file selection with duration and size limits.
+- [ ] Keep inference on-device (Basic Pitch TFLite model bundled in app).
 - [ ] Add actionable errors, progress, cancellation, and accessibility labels.
-- [ ] Document privacy behavior and require users to confirm they have rights
+- [ ] Document privacy behavior and require users to confirm they have rights 
   to process the selected audio.
-- [ ] Test representative instruments and record known limitations before
-  submission.
+- [ ] Test representative solo instruments (piano, guitar, flute, vocals) and 
+  record known limitations before submission.
+- [ ] App Store preparation: privacy policy, rejection risk mitigation, beta 
+  testing plan.
+
+### Phase 5+ — Research and hardening (future)
+
+- [ ] Evaluate MuScriptor on multi-instrument fixtures (requires HuggingFace 
+  auth and written permission for App Store use).
+- [ ] Prototype per-instrument model selection or blending.
+- [ ] Expand fixture library: guitar, strings, brass, edge cases.
+- [ ] Optimize model size and inference latency for older devices.
+- [ ] User testing with musicians; iterate on edit loop and guided recording UX.
 
 ## Model and licensing policy
 
