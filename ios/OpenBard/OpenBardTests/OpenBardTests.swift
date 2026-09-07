@@ -1,11 +1,11 @@
 import CoreGraphics
 import Foundation
 import Testing
-@testable import Audio2Score
+@testable import OpenBard
 
 final class TestBundleMarker {}
 
-struct Audio2ScoreTests {
+struct OpenBardTests {
     @Test func decodesDemoTranscription() throws {
         let bundle = Bundle(for: TestBundleMarker.self)
         let transcription = try TranscriptionLoader.loadDemo(from: bundle)

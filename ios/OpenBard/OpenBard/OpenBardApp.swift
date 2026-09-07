@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct Audio2ScoreApp: App {
+struct OpenBardApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

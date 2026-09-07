@@ -1,6 +1,6 @@
-# Audio2Score
+# openBard
 
-Audio2Score is an experimental iOS app for turning recorded or imported music
+openBard is an experimental iOS app for turning recorded or imported music
 into editable note data and, eventually, readable sheet music.
 
 > **Status:** Early prototype. The JSON contract, bundled C major chord WAV,
@@ -143,7 +143,7 @@ result whose notes can be compared with the known fixture.
 | [Basic Pitch](https://github.com/spotify/basic-pitch) | Solo or isolated polyphonic instruments | Candidate for the publishable, on-device MVP; Apache-2.0 |
 | [MuScriptor](https://github.com/muscriptor/muscriptor) | Full mixes and instrument-conditioned research | Local evaluation only until public App Store use is confirmed in writing; code is MIT, weights are CC BY-NC 4.0 |
 
-Audio2Score is currently a personal, budget-constrained project. There is no
+openBard is currently a personal, budget-constrained project. There is no
 licensing budget, and monetization is undecided. No paid feature, advertising,
 tip mechanism, or public MuScriptor-powered service should be introduced until
 the applicable model terms are confirmed.
@@ -221,7 +221,7 @@ The current endpoints are:
 Open the project in Xcode:
 
 ```bash
-open ios/Audio2Score/Audio2Score.xcodeproj
+open ios/OpenBard/OpenBard.xcodeproj
 ```
 
 The app loads `transcription.example.json` and `c-major-chord.wav` from its

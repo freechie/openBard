@@ -1,7 +1,7 @@
 [project]
 name = "worker"
 version = "0.1.0"
-description = "Demo FastAPI transcription worker for Audio2Score"
+description = "Demo FastAPI transcription worker for openBard"
 authors = [
     { name = "John", email = "4448701+freechie@users.noreply.github.com" }
 ]
