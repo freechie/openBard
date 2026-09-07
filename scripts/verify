@@ -12,12 +12,12 @@ repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
   uvx bandit -q -r app
 )
 
-derived_data="$(mktemp -d "${TMPDIR:-/tmp}/audio2score-derived-data.XXXXXX")"
+derived_data="$(mktemp -d "${TMPDIR:-/tmp}/openbard-derived-data.XXXXXX")"
 trap 'rm -rf "$derived_data"' EXIT HUP INT TERM
 
 xcodebuild \
-  -project "$repo_root/ios/Audio2Score/Audio2Score.xcodeproj" \
-  -scheme Audio2Score \
+  -project "$repo_root/ios/OpenBard/OpenBard.xcodeproj" \
+  -scheme OpenBard \
   -destination 'generic/platform=iOS' \
   -derivedDataPath "$derived_data" \
   CODE_SIGNING_ALLOWED=NO \

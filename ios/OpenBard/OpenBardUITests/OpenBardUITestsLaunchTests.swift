@@ -1,13 +1,13 @@
 //
-//  Audio2ScoreUITestsLaunchTests.swift
-//  Audio2ScoreUITests
+//  OpenBardUITestsLaunchTests.swift
+//  OpenBardUITests
 //
 //  Created by richie on 7/8/26.
 //
 
 import XCTest
 
-final class Audio2ScoreUITestsLaunchTests: XCTestCase {
+final class OpenBardUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

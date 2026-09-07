@@ -15,7 +15,7 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 12) {
             if let transcription {
-                Text("Audio2Score")
+                Text("openBard")
                     .font(.title)
                     .bold()
                 Text("Engine: \(transcription.engine)")
@@ -122,7 +122,7 @@ struct ContentView: View {
 
         do {
             let destination = FileManager.default.temporaryDirectory
-                .appendingPathComponent("a2s-import-\(UUID().uuidString)-\(url.lastPathComponent)")
+                .appendingPathComponent("openbard-import-\(UUID().uuidString)-\(url.lastPathComponent)")
             try FileManager.default.copyItem(at: url, to: destination)
             try audioPlayer.play(url: destination, name: url.lastPathComponent)
         } catch {
