@@ -12,25 +12,25 @@
 			containerPortal = 7F4D2F672FFE08260070E90D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 7F4D2F6E2FFE08260070E90D;
-			remoteInfo = Audio2Score;
+			remoteInfo = OpenBard;
 		};
 		7F4D2F872FFE08270070E90D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7F4D2F672FFE08260070E90D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 7F4D2F6E2FFE08260070E90D;
-			remoteInfo = Audio2Score;
+			remoteInfo = OpenBard;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		7F4D2F6F2FFE08260070E90D /* Audio2Score.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Audio2Score.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		7F4D2F7C2FFE08270070E90D /* Audio2ScoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Audio2ScoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		7F4D2F862FFE08270070E90D /* Audio2ScoreUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Audio2ScoreUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7F4D2F6F2FFE08260070E90D /* OpenBard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenBard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7F4D2F7C2FFE08270070E90D /* OpenBardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenBardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7F4D2F862FFE08270070E90D /* OpenBardUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenBardUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		7F4D2FA22FFEB8FC0070E90D /* Exceptions for "Audio2Score" folder in "Audio2ScoreTests" target */ = {
+		7F4D2FA22FFEB8FC0070E90D /* Exceptions for "OpenBard" folder in "OpenBardTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				"c-major-chord.wav",
@@ -40,27 +40,27 @@
 				"mixed-arrangement.wav",
 				transcription.example.json,
 			);
-			target = 7F4D2F7B2FFE08270070E90D /* Audio2ScoreTests */;
+			target = 7F4D2F7B2FFE08270070E90D /* OpenBardTests */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		7F4D2F712FFE08260070E90D /* Audio2Score */ = {
+		7F4D2F712FFE08260070E90D /* OpenBard */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				7F4D2FA22FFEB8FC0070E90D /* Exceptions for "Audio2Score" folder in "Audio2ScoreTests" target */,
+				7F4D2FA22FFEB8FC0070E90D /* Exceptions for "OpenBard" folder in "OpenBardTests" target */,
 			);
-			path = Audio2Score;
+			path = OpenBard;
 			sourceTree = "<group>";
 		};
-		7F4D2F7F2FFE08270070E90D /* Audio2ScoreTests */ = {
+		7F4D2F7F2FFE08270070E90D /* OpenBardTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Audio2ScoreTests;
+			path = OpenBardTests;
 			sourceTree = "<group>";
 		};
-		7F4D2F892FFE08270070E90D /* Audio2ScoreUITests */ = {
+		7F4D2F892FFE08270070E90D /* OpenBardUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Audio2ScoreUITests;
+			path = OpenBardUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -93,9 +93,9 @@
 		7F4D2F662FFE08260070E90D = {
 			isa = PBXGroup;
 			children = (
-				7F4D2F712FFE08260070E90D /* Audio2Score */,
-				7F4D2F7F2FFE08270070E90D /* Audio2ScoreTests */,
-				7F4D2F892FFE08270070E90D /* Audio2ScoreUITests */,
+				7F4D2F712FFE08260070E90D /* OpenBard */,
+				7F4D2F7F2FFE08270070E90D /* OpenBardTests */,
+				7F4D2F892FFE08270070E90D /* OpenBardUITests */,
 				7F4D2F702FFE08260070E90D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -103,9 +103,9 @@
 		7F4D2F702FFE08260070E90D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				7F4D2F6F2FFE08260070E90D /* Audio2Score.app */,
-				7F4D2F7C2FFE08270070E90D /* Audio2ScoreTests.xctest */,
-				7F4D2F862FFE08270070E90D /* Audio2ScoreUITests.xctest */,
+				7F4D2F6F2FFE08260070E90D /* OpenBard.app */,
+				7F4D2F7C2FFE08270070E90D /* OpenBardTests.xctest */,
+				7F4D2F862FFE08270070E90D /* OpenBardUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -113,9 +113,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		7F4D2F6E2FFE08260070E90D /* Audio2Score */ = {
+		7F4D2F6E2FFE08260070E90D /* OpenBard */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7F4D2F902FFE08270070E90D /* Build configuration list for PBXNativeTarget "Audio2Score" */;
+			buildConfigurationList = 7F4D2F902FFE08270070E90D /* Build configuration list for PBXNativeTarget "OpenBard" */;
 			buildPhases = (
 				7F4D2F6B2FFE08260070E90D /* Sources */,
 				7F4D2F6C2FFE08260070E90D /* Frameworks */,
@@ -126,18 +126,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				7F4D2F712FFE08260070E90D /* Audio2Score */,
+				7F4D2F712FFE08260070E90D /* OpenBard */,
 			);
-			name = Audio2Score;
+			name = OpenBard;
 			packageProductDependencies = (
 			);
-			productName = Audio2Score;
-			productReference = 7F4D2F6F2FFE08260070E90D /* Audio2Score.app */;
+			productName = OpenBard;
+			productReference = 7F4D2F6F2FFE08260070E90D /* OpenBard.app */;
 			productType = "com.apple.product-type.application";
 		};
-		7F4D2F7B2FFE08270070E90D /* Audio2ScoreTests */ = {
+		7F4D2F7B2FFE08270070E90D /* OpenBardTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7F4D2F932FFE08270070E90D /* Build configuration list for PBXNativeTarget "Audio2ScoreTests" */;
+			buildConfigurationList = 7F4D2F932FFE08270070E90D /* Build configuration list for PBXNativeTarget "OpenBardTests" */;
 			buildPhases = (
 				7F4D2F782FFE08270070E90D /* Sources */,
 				7F4D2F792FFE08270070E90D /* Frameworks */,
@@ -149,18 +149,18 @@
 				7F4D2F7E2FFE08270070E90D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				7F4D2F7F2FFE08270070E90D /* Audio2ScoreTests */,
+				7F4D2F7F2FFE08270070E90D /* OpenBardTests */,
 			);
-			name = Audio2ScoreTests;
+			name = OpenBardTests;
 			packageProductDependencies = (
 			);
-			productName = Audio2ScoreTests;
-			productReference = 7F4D2F7C2FFE08270070E90D /* Audio2ScoreTests.xctest */;
+			productName = OpenBardTests;
+			productReference = 7F4D2F7C2FFE08270070E90D /* OpenBardTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		7F4D2F852FFE08270070E90D /* Audio2ScoreUITests */ = {
+		7F4D2F852FFE08270070E90D /* OpenBardUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7F4D2F962FFE08270070E90D /* Build configuration list for PBXNativeTarget "Audio2ScoreUITests" */;
+			buildConfigurationList = 7F4D2F962FFE08270070E90D /* Build configuration list for PBXNativeTarget "OpenBardUITests" */;
 			buildPhases = (
 				7F4D2F822FFE08270070E90D /* Sources */,
 				7F4D2F832FFE08270070E90D /* Frameworks */,
@@ -172,13 +172,13 @@
 				7F4D2F882FFE08270070E90D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				7F4D2F892FFE08270070E90D /* Audio2ScoreUITests */,
+				7F4D2F892FFE08270070E90D /* OpenBardUITests */,
 			);
-			name = Audio2ScoreUITests;
+			name = OpenBardUITests;
 			packageProductDependencies = (
 			);
-			productName = Audio2ScoreUITests;
-			productReference = 7F4D2F862FFE08270070E90D /* Audio2ScoreUITests.xctest */;
+			productName = OpenBardUITests;
+			productReference = 7F4D2F862FFE08270070E90D /* OpenBardUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -204,7 +204,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 7F4D2F6A2FFE08260070E90D /* Build configuration list for PBXProject "Audio2Score" */;
+			buildConfigurationList = 7F4D2F6A2FFE08260070E90D /* Build configuration list for PBXProject "OpenBard" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -218,9 +218,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				7F4D2F6E2FFE08260070E90D /* Audio2Score */,
-				7F4D2F7B2FFE08270070E90D /* Audio2ScoreTests */,
-				7F4D2F852FFE08270070E90D /* Audio2ScoreUITests */,
+				7F4D2F6E2FFE08260070E90D /* OpenBard */,
+				7F4D2F7B2FFE08270070E90D /* OpenBardTests */,
+				7F4D2F852FFE08270070E90D /* OpenBardUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -276,12 +276,12 @@
 /* Begin PBXTargetDependency section */
 		7F4D2F7E2FFE08270070E90D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 7F4D2F6E2FFE08260070E90D /* Audio2Score */;
+			target = 7F4D2F6E2FFE08260070E90D /* OpenBard */;
 			targetProxy = 7F4D2F7D2FFE08270070E90D /* PBXContainerItemProxy */;
 		};
 		7F4D2F882FFE08270070E90D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 7F4D2F6E2FFE08260070E90D /* Audio2Score */;
+			target = 7F4D2F6E2FFE08260070E90D /* OpenBard */;
 			targetProxy = 7F4D2F872FFE08270070E90D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -428,7 +428,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = me.Audio2Score;
+				PRODUCT_BUNDLE_IDENTIFIER = com.freechie.openbard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -460,7 +460,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = me.Audio2Score;
+				PRODUCT_BUNDLE_IDENTIFIER = com.freechie.openbard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -482,7 +482,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = me.Audio2ScoreTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.freechie.openbardTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -490,7 +490,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Audio2Score.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Audio2Score";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenBard.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenBard";
 			};
 			name = Debug;
 		};
@@ -504,7 +504,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = me.Audio2ScoreTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.freechie.openbardTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -512,7 +512,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Audio2Score.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Audio2Score";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenBard.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenBard";
 			};
 			name = Release;
 		};
@@ -524,7 +524,7 @@
 				DEVELOPMENT_TEAM = YNM8LBCZVR;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = me.Audio2ScoreUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.freechie.openbardUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -532,7 +532,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = Audio2Score;
+				TEST_TARGET_NAME = OpenBard;
 			};
 			name = Debug;
 		};
@@ -544,7 +544,7 @@
 				DEVELOPMENT_TEAM = YNM8LBCZVR;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = me.Audio2ScoreUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.freechie.openbardUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -552,14 +552,14 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = Audio2Score;
+				TEST_TARGET_NAME = OpenBard;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		7F4D2F6A2FFE08260070E90D /* Build configuration list for PBXProject "Audio2Score" */ = {
+		7F4D2F6A2FFE08260070E90D /* Build configuration list for PBXProject "OpenBard" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7F4D2F8E2FFE08270070E90D /* Debug */,
@@ -568,7 +568,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		7F4D2F902FFE08270070E90D /* Build configuration list for PBXNativeTarget "Audio2Score" */ = {
+		7F4D2F902FFE08270070E90D /* Build configuration list for PBXNativeTarget "OpenBard" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7F4D2F912FFE08270070E90D /* Debug */,
@@ -577,7 +577,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		7F4D2F932FFE08270070E90D /* Build configuration list for PBXNativeTarget "Audio2ScoreTests" */ = {
+		7F4D2F932FFE08270070E90D /* Build configuration list for PBXNativeTarget "OpenBardTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7F4D2F942FFE08270070E90D /* Debug */,
@@ -586,7 +586,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		7F4D2F962FFE08270070E90D /* Build configuration list for PBXNativeTarget "Audio2ScoreUITests" */ = {
+		7F4D2F962FFE08270070E90D /* Build configuration list for PBXNativeTarget "OpenBardUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7F4D2F972FFE08270070E90D /* Debug */,

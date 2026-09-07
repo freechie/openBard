@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEMO_AUDIO_PATH = REPO_ROOT / "fixtures" / "c-major-chord.wav"
 ALLOWED_AUDIO_SUFFIXES = {".wav", ".mp3", ".m4a", ".caf", ".aac"}
 
-app = FastAPI(title="Audio2Score Worker")
+app = FastAPI(title="openBard Worker")
 
 
 @app.get("/health")

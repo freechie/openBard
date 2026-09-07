@@ -191,4 +191,4 @@ All fixtures, evaluation scripts, and results are committed to the repository:
 
 - **Basic Pitch:** https://github.com/spotify/basic-pitch (Apache 2.0)
 - **MuScriptor:** https://github.com/muscriptor/muscriptor (MIT code, CC BY-NC 4.0 weights)
-- **Audio2Score contract:** `contracts/transcription.schema.json`
+- **openBard contract:** `contracts/transcription.schema.json`

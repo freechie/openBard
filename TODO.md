@@ -1,4 +1,4 @@
-# Audio2Score TODO
+# openBard TODO
 
 The active plan and acceptance criteria live in the
 [README roadmap](README.md#roadmap).
