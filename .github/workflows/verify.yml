@@ -20,8 +20,8 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Install Python 3.13
-        run: uv python install 3.13
+      - name: Install Python 3.11
+        run: uv python install 3.11
 
       - name: Verify
         run: ./scripts/verify
