@@ -12,7 +12,7 @@ def test_demo_transcription_matches_contract_schema() -> None:
     schema_path = REPO_ROOT / "contracts" / "transcription.schema.json"
     schema = json.loads(schema_path.read_text())
 
-    payload = build_demo_transcription().model_dump(mode="json")
+    payload = build_demo_transcription().model_dump(mode="json", exclude_none=True)
     example = json.loads((REPO_ROOT / "contracts" / "transcription.example.json").read_text())
 
     Draft7Validator.check_schema(schema)
