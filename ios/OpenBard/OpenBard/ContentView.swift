@@ -2,6 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
+    @Environment(\.colorScheme) var colorScheme
     @State private var transcription: TranscriptionResult?
     @StateObject private var audioPlayer = DemoAudioPlayer()
     @State private var isImporterPresented = false
@@ -12,6 +13,10 @@ struct ContentView: View {
 
     init() {
         _transcription = State(initialValue: try? TranscriptionLoader.loadDemo())
+    }
+    
+    private var theme: AbletonTheme {
+        AbletonTheme.current(for: colorScheme)
     }
     
     enum EditMode {
@@ -28,23 +33,29 @@ struct ContentView: View {
                 Text("openBard")
                     .font(.title)
                     .bold()
+                    .foregroundColor(theme.textPrimary)
                 Text("Engine: \(transcription.engine)")
+                    .foregroundColor(theme.textPrimary)
                 if let keyGuess = transcription.keyGuess {
                     Text("Key: \(keyGuess)")
+                        .foregroundColor(theme.textPrimary)
                 }
                 if let tempoBpm = transcription.tempoBpm {
                     Text("Tempo: \(tempoBpm, specifier: "%.0f") BPM")
+                        .foregroundColor(theme.textPrimary)
                 }
                 Text("Notes: \(transcription.noteEvents.count)")
+                    .foregroundColor(theme.textPrimary)
                 Text("Audio: \(audioPlayer.sourceName)")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(theme.textSecondary)
                     .accessibilityIdentifier("audio-source")
 
                 PianoRollView(
                     notes: transcription.noteEvents,
                     selectedNoteIndex: $selectedNoteIndex,
                     editMode: editMode,
+                    theme: theme,
                     onNudge: { index, translation in
                         nudgeNote(at: index, by: translation)
                     }
@@ -57,9 +68,10 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: editMode == .nudge ? "hand.draw.fill" : "hand.draw")
                             .frame(minWidth: 44, minHeight: 44)
+                            .foregroundColor(editMode == .nudge ? theme.accent : theme.textSecondary)
                     }
                     .buttonStyle(.bordered)
-                    .tint(editMode == .nudge ? .blue : .gray)
+                    .tint(editMode == .nudge ? theme.accent : theme.border)
                     .accessibilityLabel("Nudge")
                     .accessibilityIdentifier("nudge-button")
                     
@@ -70,9 +82,10 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "trash")
                             .frame(minWidth: 44, minHeight: 44)
+                            .foregroundColor(theme.danger)
                     }
                     .buttonStyle(.bordered)
-                    .tint(.red)
+                    .tint(theme.danger)
                     .disabled(selectedNoteIndex == nil)
                     .accessibilityLabel("Delete")
                     .accessibilityIdentifier("delete-button")
@@ -84,9 +97,10 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "lock")
                             .frame(minWidth: 44, minHeight: 44)
+                            .foregroundColor(theme.success)
                     }
                     .buttonStyle(.bordered)
-                    .tint(.green)
+                    .tint(theme.success)
                     .disabled(selectedNoteIndex == nil)
                     .accessibilityLabel("Lock")
                     .accessibilityIdentifier("lock-button")
@@ -98,9 +112,10 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "scissors")
                             .frame(minWidth: 44, minHeight: 44)
+                            .foregroundColor(theme.accent.opacity(0.85))
                     }
                     .buttonStyle(.bordered)
-                    .tint(.purple)
+                    .tint(theme.accentDim)
                     .disabled(selectedNoteIndex == nil || (selectedNoteIndex.map { transcription.noteEvents[$0].isLocked } ?? false))
                     .accessibilityLabel("Split")
                     .accessibilityIdentifier("split-button")
@@ -112,9 +127,10 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "arrow.triangle.merge")
                             .frame(minWidth: 44, minHeight: 44)
+                            .foregroundColor(theme.accent.opacity(0.85))
                     }
                     .buttonStyle(.bordered)
-                    .tint(.indigo)
+                    .tint(theme.accentDim)
                     .disabled(selectedNoteIndex == nil || (selectedNoteIndex.map { transcription.noteEvents[$0].isLocked } ?? false))
                     .accessibilityLabel("Merge")
                     .accessibilityIdentifier("merge-button")
@@ -124,6 +140,7 @@ struct ContentView: View {
                 VStack(spacing: 8) {
                     Text("Bundled Fixtures")
                         .font(.headline)
+                        .foregroundColor(theme.textPrimary)
                     
                     Picker("Select Audio", selection: $selectedFixture) {
                         ForEach(AudioFixture.allCases) { fixture in
@@ -144,26 +161,30 @@ struct ContentView: View {
                     Button(audioPlayer.isPlaying ? "Stop" : "Play") {
                         togglePlayback()
                     }
+                    .tint(theme.accent)
                     .accessibilityIdentifier("play-demo-audio")
 
                     Button("Import audio") {
                         audioPlayer.stop()
                         isImporterPresented = true
                     }
+                    .tint(theme.accent)
                     .accessibilityIdentifier("import-audio")
                 }
 
                 if let playbackError {
                     Text(playbackError)
                         .font(.footnote)
-                        .foregroundStyle(.red)
+                        .foregroundColor(theme.danger)
                 }
             } else {
                 Text("Failed to load demo transcription")
-                    .foregroundStyle(.red)
+                    .foregroundColor(theme.danger)
             }
         }
         .padding()
+        .background(theme.background)
+        .foregroundColor(theme.textPrimary)
         .fileImporter(
             isPresented: $isImporterPresented,
             allowedContentTypes: [.audio, .wav, .mpeg4Audio, .mp3],
