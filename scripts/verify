@@ -8,9 +8,15 @@ repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
   uv sync --frozen
   uv run pytest -q
   uv run python -m compileall -q app tests
-  uvx --from pip-audit pip-audit --path .venv/lib/python3.13/site-packages
+  uvx --from pip-audit pip-audit --path .venv/lib/python3.11/site-packages
   uvx bandit -q -r app
 )
+
+echo "✓ Worker tests passed"
+echo ""
+echo "Verifying Basic Pitch eval results against acceptance criteria..."
+python3 "$repo_root/scripts/check_basicpitch_eval.py"
+echo ""
 
 derived_data="$(mktemp -d "${TMPDIR:-/tmp}/openbard-derived-data.XXXXXX")"
 trap 'rm -rf "$derived_data"' EXIT HUP INT TERM

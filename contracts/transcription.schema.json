@@ -7,25 +7,23 @@
   "required": [
     "engine",
     "engine_version",
-    "tempo_bpm",
-    "key_guess",
     "note_events"
   ],
   "properties": {
     "engine": {
       "type": "string",
-      "enum": ["dsp_v0", "ml_baseline"]
+      "enum": ["dsp_v0", "ml_baseline", "basic_pitch"]
     },
     "engine_version": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$"
     },
     "tempo_bpm": {
-      "type": "number",
+      "type": ["number", "null"],
       "exclusiveMinimum": 0
     },
     "key_guess": {
-      "type": "string",
+      "type": ["string", "null"],
       "minLength": 1
     },
     "note_events": {
@@ -70,6 +68,10 @@
           "type": "number",
           "minimum": 0,
           "maximum": 1
+        },
+        "onset_uncertainty_seconds": {
+          "type": ["number", "null"],
+          "minimum": 0
         },
         "staff_hint": {
           "type": "string",
