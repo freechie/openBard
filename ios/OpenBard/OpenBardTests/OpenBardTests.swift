@@ -228,4 +228,33 @@ struct OpenBardTests {
         let candidate = NoteHelpers.findMergeCandidate(for: notes[0], in: notes, currentIndex: 0)
         #expect(candidate == 1)
     }
+    
+    @Test func pianoRollLabelPositionsMatchFrames() {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 1.0, velocity: 0.8, confidence: 1, staffHint: .treble),
+            NoteEvent(pitchMidi: 64, onsetSeconds: 0.5, durationSeconds: 1.0, velocity: 0.8, confidence: 1, staffHint: .treble),
+            NoteEvent(pitchMidi: 67, onsetSeconds: 1.0, durationSeconds: 1.0, velocity: 0.8, confidence: 1, staffHint: .treble)
+        ]
+        let size = CGSize(width: 300, height: 150)
+        let frames = PianoRollLayout.frames(notes: notes, in: size)
+        
+        let pitches = notes.map(\.pitchMidi)
+        guard let minPitch = pitches.min(), let maxPitch = pitches.max() else {
+            #expect(Bool(false))
+            return
+        }
+        
+        let pitchSpan = maxPitch - minPitch
+        let rowHeight = size.height / CGFloat(pitchSpan + 1)
+        
+        for (index, note) in notes.enumerated() {
+            let frame = frames[index]
+            let expectedLabelY = CGFloat(maxPitch - note.pitchMidi) * rowHeight + rowHeight / 2
+            let frameCenterY = frame.midY
+            
+            #expect(abs(expectedLabelY - frameCenterY) < rowHeight / 2)
+            #expect(expectedLabelY >= 0)
+            #expect(expectedLabelY <= size.height)
+        }
+    }
 }

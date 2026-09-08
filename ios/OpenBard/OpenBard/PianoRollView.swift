@@ -83,16 +83,20 @@ struct PianoRollView: View {
     private func pitchLabels(in size: CGSize) -> some View {
         if let minPitch = notes.map(\.pitchMidi).min(),
            let maxPitch = notes.map(\.pitchMidi).max() {
-            let span = max(CGFloat(maxPitch - minPitch), 1)
+            let pitchSpan = max(maxPitch - minPitch, 1)
+            let rowHeight = size.height / CGFloat(pitchSpan + 1)
+            
+            let uniquePitches = Set(notes.map(\.pitchMidi)).sorted()
+            
             ZStack {
-                ForEach(notes) { note in
-                    let row = CGFloat(maxPitch - note.pitchMidi) / span
-                    Text(PianoRollLayout.pitchName(midi: note.pitchMidi))
+                ForEach(uniquePitches, id: \.self) { pitch in
+                    let y = CGFloat(maxPitch - pitch) * rowHeight + rowHeight / 2
+                    Text(PianoRollLayout.pitchName(midi: pitch))
                         .font(.caption2)
                         .foregroundColor(theme.textSecondary)
                         .position(
                             x: 16,
-                            y: row * size.height + size.height / (span * 2)
+                            y: y
                         )
                 }
             }
