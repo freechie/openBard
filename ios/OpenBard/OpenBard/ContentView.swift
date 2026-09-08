@@ -7,9 +7,17 @@ struct ContentView: View {
     @State private var isImporterPresented = false
     @State private var playbackError: String?
     @State private var selectedFixture: AudioFixture = .cMajorChord
+    @State private var selectedNoteIndex: Int?
+    @State private var editMode: EditMode = .inactive
 
     init() {
         _transcription = State(initialValue: try? TranscriptionLoader.loadDemo())
+    }
+    
+    enum EditMode {
+        case inactive
+        case nudge
+        case delete
     }
 
     var body: some View {
@@ -19,16 +27,58 @@ struct ContentView: View {
                     .font(.title)
                     .bold()
                 Text("Engine: \(transcription.engine)")
-                Text("Key: \(transcription.keyGuess)")
-                Text("Tempo: \(transcription.tempoBpm, specifier: "%.0f") BPM")
+                if let keyGuess = transcription.keyGuess {
+                    Text("Key: \(keyGuess)")
+                }
+                if let tempoBpm = transcription.tempoBpm {
+                    Text("Tempo: \(tempoBpm, specifier: "%.0f") BPM")
+                }
                 Text("Notes: \(transcription.noteEvents.count)")
                 Text("Audio: \(audioPlayer.sourceName)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("audio-source")
 
-                PianoRollView(notes: transcription.noteEvents)
-                    .frame(minHeight: 140)
+                PianoRollView(
+                    notes: transcription.noteEvents,
+                    selectedNoteIndex: $selectedNoteIndex,
+                    editMode: editMode
+                )
+                .frame(minHeight: 200)
+                .onTapGesture { location in
+                    handlePianoRollTap(location: location, in: transcription.noteEvents)
+                }
+                
+                HStack(spacing: 12) {
+                    Button(editMode == .nudge ? "Nudge ✓" : "Nudge") {
+                        editMode = editMode == .nudge ? .inactive : .nudge
+                        selectedNoteIndex = nil
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(editMode == .nudge ? .blue : .gray)
+                    .accessibilityIdentifier("nudge-button")
+                    
+                    Button("Delete") {
+                        if let index = selectedNoteIndex {
+                            deleteNote(at: index)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.red)
+                    .disabled(selectedNoteIndex == nil)
+                    .accessibilityIdentifier("delete-button")
+                    
+                    Button("Lock") {
+                        if let index = selectedNoteIndex {
+                            lockNote(at: index)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.green)
+                    .disabled(selectedNoteIndex == nil)
+                    .accessibilityIdentifier("lock-button")
+                }
+                .padding(.vertical, 4)
                 
                 VStack(spacing: 8) {
                     Text("Bundled Fixtures")
@@ -42,6 +92,8 @@ struct ContentView: View {
                     .pickerStyle(.segmented)
                     .accessibilityIdentifier("fixture-picker")
                     .onChange(of: selectedFixture) { _, newFixture in
+                        editMode = .inactive
+                        selectedNoteIndex = nil
                         loadFixture(newFixture)
                     }
                 }
@@ -128,6 +180,27 @@ struct ContentView: View {
         } catch {
             playbackError = "Could not play imported audio"
         }
+    }
+    
+    private func handlePianoRollTap(location: CGPoint, in notes: [NoteEvent]) {
+        guard editMode != .inactive else { return }
+        selectedNoteIndex = nil
+    }
+    
+    private func deleteNote(at index: Int) {
+        guard var trans = transcription else { return }
+        guard index < trans.noteEvents.count else { return }
+        trans.noteEvents.remove(at: index)
+        transcription = trans
+        selectedNoteIndex = nil
+    }
+    
+    private func lockNote(at index: Int) {
+        guard var trans = transcription else { return }
+        guard index < trans.noteEvents.count else { return }
+        trans.noteEvents[index].isLocked = true
+        transcription = trans
+        selectedNoteIndex = nil
     }
 }
 
