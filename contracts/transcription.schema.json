@@ -70,7 +70,7 @@
           "maximum": 1
         },
         "onset_uncertainty_seconds": {
-          "type": "number",
+          "type": ["number", "null"],
           "minimum": 0
         },
         "staff_hint": {
