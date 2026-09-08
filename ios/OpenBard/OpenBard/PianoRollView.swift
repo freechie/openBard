@@ -2,12 +2,25 @@ import SwiftUI
 
 struct PianoRollView: View {
     let notes: [NoteEvent]
+    @Binding var selectedNoteIndex: Int?
+    var editMode: ContentView.EditMode = .inactive
 
     var body: some View {
         Canvas { context, size in
-            for frame in PianoRollLayout.frames(notes: notes, in: size) {
+            let frames = PianoRollLayout.frames(notes: notes, in: size)
+            for (index, frame) in frames.enumerated() {
+                let note = notes[index]
                 let path = Path(roundedRect: frame, cornerRadius: 3)
-                context.fill(path, with: .color(.accentColor.opacity(0.85)))
+                let opacity = min(max(0.3, note.confidence * 0.85), 0.95)
+                
+                var color = Color.accentColor
+                if note.isLocked {
+                    color = .green
+                } else if selectedNoteIndex == index {
+                    color = .orange
+                }
+                
+                context.fill(path, with: .color(color.opacity(opacity)))
             }
         }
         .background(Color.secondary.opacity(0.12))
@@ -16,7 +29,7 @@ struct PianoRollView: View {
             pitchLabels
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Piano roll, C major chord, three overlapping notes")
+        .accessibilityLabel("Piano roll with \(notes.count) notes")
         .accessibilityIdentifier("piano-roll")
     }
 

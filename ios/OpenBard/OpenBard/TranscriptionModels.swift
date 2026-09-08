@@ -3,21 +3,28 @@ import Foundation
 struct TranscriptionResult: Decodable {
     let engine: String
     let engineVersion: String
-    let tempoBpm: Double
-    let keyGuess: String
-    let noteEvents: [NoteEvent]
+    let tempoBpm: Double?
+    let keyGuess: String?
+    var noteEvents: [NoteEvent]
 }
 
 struct NoteEvent: Decodable, Identifiable {
-    var id: String {
-        "\(pitchMidi)-\(onsetSeconds)-\(durationSeconds)"
-    }
     let pitchMidi: Int
-    let onsetSeconds: Double
+    var onsetSeconds: Double
     let durationSeconds: Double
     let velocity: Double
     let confidence: Double
+    let onsetUncertaintySeconds: Double?
     let staffHint: StaffHint
+    var isLocked: Bool = false
+    
+    var id: String {
+        "\(pitchMidi)-\(onsetSeconds)-\(durationSeconds)"
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case pitchMidi, onsetSeconds, durationSeconds, velocity, confidence, onsetUncertaintySeconds, staffHint
+    }
 }
 
 enum StaffHint: String, Decodable {

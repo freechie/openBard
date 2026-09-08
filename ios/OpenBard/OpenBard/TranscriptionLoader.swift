@@ -86,7 +86,7 @@ enum AudioFixture: String, CaseIterable, Identifiable {
         case .cMajorChord:
             return nil
         case .isolatedPiano:
-            return "isolated-piano-ground-truth"
+            return "isolated-piano-basicpitch"
         case .mixedArrangement:
             return "mixed-arrangement-ground-truth"
         }
