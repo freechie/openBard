@@ -4,41 +4,60 @@ struct PianoRollView: View {
     let notes: [NoteEvent]
     @Binding var selectedNoteIndex: Int?
     var editMode: ContentView.EditMode = .inactive
+    var onNudge: ((Int, CGSize) -> Void)?
 
     var body: some View {
-        Canvas { context, size in
-            let frames = PianoRollLayout.frames(notes: notes, in: size)
-            for (index, frame) in frames.enumerated() {
-                let note = notes[index]
-                let path = Path(roundedRect: frame, cornerRadius: 3)
-                let opacity = min(max(0.3, note.confidence * 0.85), 0.95)
-                
-                var color = Color.accentColor
-                if note.isLocked {
-                    color = .green
-                } else if selectedNoteIndex == index {
-                    color = .orange
+        GeometryReader { geometry in
+            Canvas { context, size in
+                let frames = PianoRollLayout.frames(notes: notes, in: size)
+                for (index, frame) in frames.enumerated() {
+                    let note = notes[index]
+                    let path = Path(roundedRect: frame, cornerRadius: 3)
+                    let opacity = min(max(0.3, note.confidence * 0.85), 0.95)
+                    
+                    var color = Color.accentColor
+                    if note.isLocked {
+                        color = .green
+                    } else if selectedNoteIndex == index {
+                        color = .orange
+                    }
+                    
+                    context.fill(path, with: .color(color.opacity(opacity)))
                 }
-                
-                context.fill(path, with: .color(color.opacity(opacity)))
             }
+            .background(Color.secondary.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay {
+                pitchLabels(in: geometry.size)
+            }
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        if editMode == .nudge, let index = selectedNoteIndex {
+                            onNudge?(index, value.translation)
+                        }
+                    }
+                    .onEnded { value in
+                        if editMode == .nudge {
+                            return
+                        }
+                        if value.translation.width < 5 && value.translation.height < 5 {
+                            selectedNoteIndex = hitTestNote(at: value.location, in: geometry.size)
+                        }
+                    }
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Piano roll with \(notes.count) notes")
+            .accessibilityIdentifier("piano-roll")
         }
-        .background(Color.secondary.opacity(0.12))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            pitchLabels
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Piano roll with \(notes.count) notes")
-        .accessibilityIdentifier("piano-roll")
     }
 
     @ViewBuilder
-    private var pitchLabels: some View {
+    private func pitchLabels(in size: CGSize) -> some View {
         if let minPitch = notes.map(\.pitchMidi).min(),
            let maxPitch = notes.map(\.pitchMidi).max() {
             let span = max(CGFloat(maxPitch - minPitch), 1)
-            GeometryReader { geometry in
+            ZStack {
                 ForEach(notes) { note in
                     let row = CGFloat(maxPitch - note.pitchMidi) / span
                     Text(PianoRollLayout.pitchName(midi: note.pitchMidi))
@@ -46,12 +65,22 @@ struct PianoRollView: View {
                         .foregroundStyle(.secondary)
                         .position(
                             x: 16,
-                            y: row * geometry.size.height + geometry.size.height / (span * 2)
+                            y: row * size.height + size.height / (span * 2)
                         )
                 }
             }
             .allowsHitTesting(false)
         }
+    }
+    
+    private func hitTestNote(at location: CGPoint, in size: CGSize) -> Int? {
+        let frames = PianoRollLayout.frames(notes: notes, in: size)
+        for (index, frame) in frames.enumerated() {
+            if frame.contains(location) {
+                return index
+            }
+        }
+        return nil
     }
 }
 
