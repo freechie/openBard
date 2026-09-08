@@ -5,11 +5,14 @@ description = "Demo FastAPI transcription worker for openBard"
 authors = [
     { name = "John", email = "4448701+freechie@users.noreply.github.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.11,<3.13"
 dependencies = [
+    "basic-pitch>=0.3.0",
     "fastapi>=0.139.0",
+    "numpy<2",
     "pydantic>=2.13.4",
     "python-multipart>=0.0.32",
+    "setuptools>=75.0.0",
     "uvicorn[standard]>=0.50.2",
 ]
 
