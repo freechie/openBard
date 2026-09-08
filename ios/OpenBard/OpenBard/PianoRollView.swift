@@ -4,6 +4,7 @@ struct PianoRollView: View {
     let notes: [NoteEvent]
     @Binding var selectedNoteIndex: Int?
     var editMode: ContentView.EditMode = .inactive
+    var theme: AbletonTheme
     var onNudge: ((Int, CGSize) -> Void)?
 
     var body: some View {
@@ -15,18 +16,24 @@ struct PianoRollView: View {
                     let path = Path(roundedRect: frame, cornerRadius: 3)
                     let opacity = min(max(0.3, note.confidence * 0.85), 0.95)
                     
-                    var color = Color.accentColor
+                    var color = theme.noteFill
                     if note.isLocked {
-                        color = .green
+                        color = theme.noteLocked
                     } else if selectedNoteIndex == index {
-                        color = .orange
+                        color = theme.noteSelected
                     }
                     
                     context.fill(path, with: .color(color.opacity(opacity)))
                 }
+                
+                drawGrid(context: context, size: size)
             }
-            .background(Color.secondary.opacity(0.12))
+            .background(theme.pianoRollBackground)
             .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(theme.border, lineWidth: 1)
+            )
             .overlay {
                 pitchLabels(in: geometry.size)
             }
@@ -51,6 +58,26 @@ struct PianoRollView: View {
             .accessibilityIdentifier("piano-roll")
         }
     }
+    
+    private func drawGrid(context: GraphicsContext, size: CGSize) {
+        guard !notes.isEmpty else { return }
+        
+        let pitches = notes.map(\.pitchMidi)
+        guard let minPitch = pitches.min(), let maxPitch = pitches.max() else { return }
+        
+        let pitchSpan = max(maxPitch - minPitch, 1)
+        let rowHeight = size.height / CGFloat(pitchSpan + 1)
+        let labelGutter: CGFloat = 36
+        
+        for i in 0...pitchSpan {
+            let y = CGFloat(i) * rowHeight
+            let path = Path { p in
+                p.move(to: CGPoint(x: labelGutter, y: y))
+                p.addLine(to: CGPoint(x: size.width, y: y))
+            }
+            context.stroke(path, with: .color(theme.gridLine), lineWidth: 0.5)
+        }
+    }
 
     @ViewBuilder
     private func pitchLabels(in size: CGSize) -> some View {
@@ -62,7 +89,7 @@ struct PianoRollView: View {
                     let row = CGFloat(maxPitch - note.pitchMidi) / span
                     Text(PianoRollLayout.pitchName(midi: note.pitchMidi))
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(theme.textSecondary)
                         .position(
                             x: 16,
                             y: row * size.height + size.height / (span * 2)
