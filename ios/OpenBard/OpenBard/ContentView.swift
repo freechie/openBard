@@ -52,51 +52,71 @@ struct ContentView: View {
                 .frame(minHeight: 200)
                 
                 HStack(spacing: 12) {
-                    Button(editMode == .nudge ? "Nudge ✓" : "Nudge") {
+                    Button {
                         editMode = editMode == .nudge ? .inactive : .nudge
+                    } label: {
+                        Image(systemName: editMode == .nudge ? "hand.draw.fill" : "hand.draw")
+                            .frame(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.bordered)
                     .tint(editMode == .nudge ? .blue : .gray)
+                    .accessibilityLabel("Nudge")
                     .accessibilityIdentifier("nudge-button")
                     
-                    Button("Delete") {
+                    Button {
                         if let index = selectedNoteIndex {
                             deleteNote(at: index)
                         }
+                    } label: {
+                        Image(systemName: "trash")
+                            .frame(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.bordered)
                     .tint(.red)
                     .disabled(selectedNoteIndex == nil)
+                    .accessibilityLabel("Delete")
                     .accessibilityIdentifier("delete-button")
                     
-                    Button("Lock") {
+                    Button {
                         if let index = selectedNoteIndex {
                             lockNote(at: index)
                         }
+                    } label: {
+                        Image(systemName: "lock")
+                            .frame(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.bordered)
                     .tint(.green)
                     .disabled(selectedNoteIndex == nil)
+                    .accessibilityLabel("Lock")
                     .accessibilityIdentifier("lock-button")
                     
-                    Button("Split") {
+                    Button {
                         if let index = selectedNoteIndex {
                             splitNote(at: index)
                         }
+                    } label: {
+                        Image(systemName: "scissors")
+                            .frame(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.bordered)
                     .tint(.purple)
                     .disabled(selectedNoteIndex == nil || (selectedNoteIndex.map { transcription.noteEvents[$0].isLocked } ?? false))
+                    .accessibilityLabel("Split")
                     .accessibilityIdentifier("split-button")
                     
-                    Button("Merge") {
+                    Button {
                         if let index = selectedNoteIndex {
                             mergeNote(at: index)
                         }
+                    } label: {
+                        Image(systemName: "arrow.triangle.merge")
+                            .frame(minWidth: 44, minHeight: 44)
                     }
                     .buttonStyle(.bordered)
                     .tint(.indigo)
                     .disabled(selectedNoteIndex == nil || (selectedNoteIndex.map { transcription.noteEvents[$0].isLocked } ?? false))
+                    .accessibilityLabel("Merge")
                     .accessibilityIdentifier("merge-button")
                 }
                 .padding(.vertical, 4)
