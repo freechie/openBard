@@ -154,8 +154,6 @@ cmd_launch() {
 	mkdir -p "${state_dir}"
 	: >"${log_file}"
 
-	# Bind via the venv binary so the stored PID is the listening process.
-	# Do not pass --reload. The reloader parent does not own the port.
 	(
 		cd "${worker_dir}"
 		exec "${uvicorn_bin}" app.main:app --host "${host}" --port "${port}" --log-level info
