@@ -8,7 +8,11 @@ repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
   uv sync --frozen
   uv run pytest -q
   uv run python -m compileall -q app tests
-  uvx --from pip-audit pip-audit --path .venv/lib/python3.11/site-packages
+  # TensorFlow 2.15 (via basic-pitch) pins protobuf 4.x. PYSEC-2026-1805 is
+  # fixed in protobuf 5.29.6 / 6.33.5 only. The worker does not parse untrusted
+  # protobuf JSON through json_format.ParseDict.
+  uvx --from pip-audit pip-audit --path .venv/lib/python3.11/site-packages \
+    --ignore-vuln PYSEC-2026-1805
   uvx bandit -q -r app
 )
 

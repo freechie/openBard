@@ -28,134 +28,38 @@ struct ContentView: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             if let transcription {
-                Text("openBard")
-                    .font(.title)
-                    .bold()
-                    .foregroundColor(theme.textPrimary)
-                Text("Engine: \(transcription.engine)")
-                    .foregroundColor(theme.textPrimary)
-                if let keyGuess = transcription.keyGuess {
-                    Text("Key: \(keyGuess)")
-                        .foregroundColor(theme.textPrimary)
-                }
-                if let tempoBpm = transcription.tempoBpm {
-                    Text("Tempo: \(tempoBpm, specifier: "%.0f") BPM")
-                        .foregroundColor(theme.textPrimary)
-                }
-                Text("Notes: \(transcription.noteEvents.count)")
-                    .foregroundColor(theme.textPrimary)
-                Text("Audio: \(audioPlayer.sourceName)")
-                    .font(.subheadline)
-                    .foregroundColor(theme.textSecondary)
-                    .accessibilityIdentifier("audio-source")
+                metadataHeader(transcription)
 
-                PianoRollView(
-                    notes: transcription.noteEvents,
-                    selectedNoteIndex: $selectedNoteIndex,
-                    editMode: editMode,
-                    theme: theme,
-                    onNudge: { index, translation in
-                        nudgeNote(at: index, by: translation)
-                    }
-                )
-                .frame(minHeight: 200)
-                
-                HStack(spacing: 12) {
-                    Button {
-                        editMode = editMode == .nudge ? .inactive : .nudge
-                    } label: {
-                        Image(systemName: editMode == .nudge ? "hand.draw.fill" : "hand.draw")
-                            .frame(minWidth: 44, minHeight: 44)
-                            .foregroundColor(editMode == .nudge ? theme.accent : theme.textSecondary)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(editMode == .nudge ? theme.accent : theme.border)
-                    .accessibilityLabel("Nudge")
-                    .accessibilityIdentifier("nudge-button")
-                    
-                    Button {
-                        if let index = selectedNoteIndex {
-                            deleteNote(at: index)
+                ZoomableViewport(allowsPan: editMode != .nudge, theme: theme) {
+                    PianoRollView(
+                        notes: transcription.noteEvents,
+                        selectedNoteIndex: $selectedNoteIndex,
+                        editMode: editMode,
+                        theme: theme,
+                        onNudge: { index, translation in
+                            nudgeNote(at: index, by: translation)
                         }
-                    } label: {
-                        Image(systemName: "trash")
-                            .frame(minWidth: 44, minHeight: 44)
-                            .foregroundColor(theme.danger)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(theme.danger)
-                    .disabled(selectedNoteIndex == nil)
-                    .accessibilityLabel("Delete")
-                    .accessibilityIdentifier("delete-button")
-                    
-                    Button {
-                        if let index = selectedNoteIndex {
-                            lockNote(at: index)
-                        }
-                    } label: {
-                        Image(systemName: "lock")
-                            .frame(minWidth: 44, minHeight: 44)
-                            .foregroundColor(theme.success)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(theme.success)
-                    .disabled(selectedNoteIndex == nil)
-                    .accessibilityLabel("Lock")
-                    .accessibilityIdentifier("lock-button")
-                    
-                    Button {
-                        if let index = selectedNoteIndex {
-                            splitNote(at: index)
-                        }
-                    } label: {
-                        Image(systemName: "scissors")
-                            .frame(minWidth: 44, minHeight: 44)
-                            .foregroundColor(theme.accent.opacity(0.85))
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(theme.accentDim)
-                    .disabled(selectedNoteIndex == nil || (selectedNoteIndex.map { transcription.noteEvents[$0].isLocked } ?? false))
-                    .accessibilityLabel("Split")
-                    .accessibilityIdentifier("split-button")
-                    
-                    Button {
-                        if let index = selectedNoteIndex {
-                            mergeNote(at: index)
-                        }
-                    } label: {
-                        Image(systemName: "arrow.triangle.merge")
-                            .frame(minWidth: 44, minHeight: 44)
-                            .foregroundColor(theme.accent.opacity(0.85))
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(theme.accentDim)
-                    .disabled(selectedNoteIndex == nil || (selectedNoteIndex.map { transcription.noteEvents[$0].isLocked } ?? false))
-                    .accessibilityLabel("Merge")
-                    .accessibilityIdentifier("merge-button")
+                    )
                 }
-                .padding(.vertical, 4)
-                
-                VStack(spacing: 8) {
-                    Text("Bundled Fixtures")
-                        .font(.headline)
-                        .foregroundColor(theme.textPrimary)
-                    
-                    Picker("Select Audio", selection: $selectedFixture) {
-                        ForEach(AudioFixture.allCases) { fixture in
-                            Text(fixture.rawValue).tag(fixture)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("fixture-picker")
-                    .onChange(of: selectedFixture) { _, newFixture in
-                        editMode = .inactive
-                        selectedNoteIndex = nil
-                        loadFixture(newFixture)
-                    }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(minHeight: 140)
+                .layoutPriority(1)
+                .accessibilityIdentifier("piano-roll-viewport")
+
+                editToolbar(transcription)
+
+                Button("Lock all") {
+                    lockAllNotes()
                 }
-                .padding(.vertical, 4)
+                .tint(theme.success)
+                .disabled(transcription.noteEvents.isEmpty || transcription.noteEvents.allSatisfy(\.isLocked))
+                .accessibilityIdentifier("lock-all-button")
+
+                scoreSection(transcription)
+
+                fixturePicker
 
                 HStack {
                     Button(audioPlayer.isPlaying ? "Stop" : "Play") {
@@ -191,6 +95,161 @@ struct ContentView: View {
             allowsMultipleSelection: false
         ) { result in
             importAudio(result)
+        }
+    }
+
+    private func metadataHeader(_ transcription: TranscriptionResult) -> some View {
+        let key = transcription.keyGuess.map { " · \($0)" } ?? ""
+        let tempo = transcription.tempoBpm.map { String(format: " · %.0f BPM", $0) } ?? ""
+        return VStack(alignment: .leading, spacing: 2) {
+            Text("openBard")
+                .font(.headline)
+                .bold()
+                .foregroundColor(theme.textPrimary)
+            Text("\(transcription.engine)\(key)\(tempo) · \(transcription.noteEvents.count) notes")
+                .font(.caption)
+                .foregroundColor(theme.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(audioPlayer.sourceName)
+                .font(.caption)
+                .foregroundColor(theme.textSecondary)
+                .accessibilityIdentifier("audio-source")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func editToolbar(_ transcription: TranscriptionResult) -> some View {
+        HStack(spacing: 12) {
+            Button {
+                editMode = editMode == .nudge ? .inactive : .nudge
+            } label: {
+                Image(systemName: editMode == .nudge ? "hand.draw.fill" : "hand.draw")
+                    .frame(minWidth: 44, minHeight: 44)
+                    .foregroundColor(editMode == .nudge ? theme.accent : theme.textSecondary)
+            }
+            .buttonStyle(.bordered)
+            .tint(editMode == .nudge ? theme.accent : theme.border)
+            .accessibilityLabel("Nudge")
+            .accessibilityIdentifier("nudge-button")
+
+            Button {
+                if let index = selectedNoteIndex {
+                    deleteNote(at: index)
+                }
+            } label: {
+                Image(systemName: "trash")
+                    .frame(minWidth: 44, minHeight: 44)
+                    .foregroundColor(theme.danger)
+            }
+            .buttonStyle(.bordered)
+            .tint(theme.danger)
+            .disabled(selectedNoteIndex == nil)
+            .accessibilityLabel("Delete")
+            .accessibilityIdentifier("delete-button")
+
+            Button {
+                if let index = selectedNoteIndex {
+                    lockNote(at: index)
+                }
+            } label: {
+                Image(systemName: "lock")
+                    .frame(minWidth: 44, minHeight: 44)
+                    .foregroundColor(theme.success)
+            }
+            .buttonStyle(.bordered)
+            .tint(theme.success)
+            .disabled(selectedNoteIndex == nil)
+            .accessibilityLabel("Lock")
+            .accessibilityIdentifier("lock-button")
+
+            Button {
+                if let index = selectedNoteIndex {
+                    splitNote(at: index)
+                }
+            } label: {
+                Image(systemName: "scissors")
+                    .frame(minWidth: 44, minHeight: 44)
+                    .foregroundColor(theme.accent.opacity(0.85))
+            }
+            .buttonStyle(.bordered)
+            .tint(theme.accentDim)
+            .disabled(selectedNoteIndex == nil || (selectedNoteIndex.map { transcription.noteEvents[$0].isLocked } ?? false))
+            .accessibilityLabel("Split")
+            .accessibilityIdentifier("split-button")
+
+            Button {
+                if let index = selectedNoteIndex {
+                    mergeNote(at: index)
+                }
+            } label: {
+                Image(systemName: "arrow.triangle.merge")
+                    .frame(minWidth: 44, minHeight: 44)
+                    .foregroundColor(theme.accent.opacity(0.85))
+            }
+            .buttonStyle(.bordered)
+            .tint(theme.accentDim)
+            .disabled(selectedNoteIndex == nil || (selectedNoteIndex.map { transcription.noteEvents[$0].isLocked } ?? false))
+            .accessibilityLabel("Merge")
+            .accessibilityIdentifier("merge-button")
+        }
+    }
+
+    @ViewBuilder
+    private func scoreSection(_ transcription: TranscriptionResult) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Score")
+                .font(.subheadline)
+                .bold()
+                .foregroundColor(theme.textPrimary)
+            if let score = ScoreBuilder.build(from: transcription.noteEvents) {
+                Text(StaffLayout.summary(for: score))
+                    .font(.caption)
+                    .foregroundColor(theme.textSecondary)
+                    .accessibilityIdentifier("score-summary")
+                ZoomableViewport(theme: theme) {
+                    StaffPreviewView(score: score, theme: theme)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(minHeight: 120)
+                .accessibilityIdentifier("staff-viewport")
+            } else {
+                ZoomableViewport(theme: theme) {
+                    Text("Lock notes to build a score")
+                        .font(.subheadline)
+                        .foregroundColor(theme.textSecondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .accessibilityIdentifier("score-empty")
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(minHeight: 120)
+                .accessibilityIdentifier("staff-viewport")
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(minHeight: 150)
+        .layoutPriority(1)
+    }
+
+    private var fixturePicker: some View {
+        VStack(spacing: 6) {
+            Text("Bundled Fixtures")
+                .font(.subheadline)
+                .bold()
+                .foregroundColor(theme.textPrimary)
+
+            Picker("Select Audio", selection: $selectedFixture) {
+                ForEach(AudioFixture.allCases) { fixture in
+                    Text(fixture.rawValue).tag(fixture)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("fixture-picker")
+            .onChange(of: selectedFixture) { _, newFixture in
+                editMode = .inactive
+                selectedNoteIndex = nil
+                loadFixture(newFixture)
+            }
         }
     }
 
@@ -258,6 +317,16 @@ struct ContentView: View {
         trans.noteEvents[index].isLocked = true
         transcription = trans
         selectedNoteIndex = nil
+    }
+
+    private func lockAllNotes() {
+        guard var trans = transcription else { return }
+        for index in trans.noteEvents.indices {
+            trans.noteEvents[index].isLocked = true
+        }
+        transcription = trans
+        selectedNoteIndex = nil
+        editMode = .inactive
     }
     
     private func nudgeNote(at index: Int, by translation: CGSize) {
