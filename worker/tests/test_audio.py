@@ -18,7 +18,7 @@ def test_demo_audio_returns_wav_fixture() -> None:
     assert body == DEMO_AUDIO_PATH.read_bytes()
 
 
-def test_transcribe_accepts_wav_and_returns_demo_chord() -> None:
+def test_transcribe_accepts_wav_and_returns_basic_pitch_notes() -> None:
     wav = Path(__file__).resolve().parents[2] / "fixtures" / "c-major-chord.wav"
 
     response = client.post(
@@ -28,7 +28,12 @@ def test_transcribe_accepts_wav_and_returns_demo_chord() -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert [note["pitch_midi"] for note in body["note_events"]] == [60, 64, 67]
+    assert body["engine"] == "basic_pitch"
+    assert body["tempo_bpm"] is None
+    assert body["key_guess"] is None
+    pitches = sorted(note["pitch_midi"] for note in body["note_events"])
+    assert pitches == [60, 64, 67]
+    assert all(note["confidence"] == note["velocity"] for note in body["note_events"])
 
 
 def test_transcribe_rejects_unsupported_type() -> None:

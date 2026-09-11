@@ -12,7 +12,7 @@ dependencies = [
     "numpy<2",
     "pydantic>=2.13.4",
     "python-multipart>=0.0.32",
-    "setuptools>=75.0.0",
+    "setuptools>=75,<81",
     "uvicorn[standard]>=0.50.2",
 ]
 
