@@ -1,0 +1,405 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PATH="${HOME}/.local/bin:${PATH}"
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+skill_dir=$(CDPATH= cd -- "${script_dir}/.." && pwd)
+detected_root=$(CDPATH= cd -- "${skill_dir}/../../.." && pwd)
+repo_root="${OPENBARD_ROOT:-$detected_root}"
+worker_dir="${repo_root}/worker"
+uvicorn_bin="${worker_dir}/.venv/bin/uvicorn"
+
+run_id="${OPENBARD_VERIFY_RUN_ID:-default}"
+state_dir="${OPENBARD_VERIFY_STATE_DIR:-/tmp/openbard-verify-run-${run_id}}"
+evidence_dir="${OPENBARD_VERIFY_EVIDENCE_DIR:-/tmp/openbard-verify-evidence}"
+host="${OPENBARD_VERIFY_HOST:-127.0.0.1}"
+port="${OPENBARD_VERIFY_PORT:-18765}"
+state_file="${state_dir}/state.env"
+log_file="${state_dir}/uvicorn.log"
+ready_timeout_s="${OPENBARD_VERIFY_READY_TIMEOUT_S:-30}"
+http_timeout_s="${OPENBARD_VERIFY_HTTP_TIMEOUT_S:-120}"
+
+die() {
+	echo "control-openbard: $*" >&2
+	exit 1
+}
+
+usage() {
+	cat <<'EOF'
+control-openbard launch
+control-openbard doctor
+control-openbard url
+control-openbard get <path> [--expect <code>] [--save <name>]
+control-openbard post-audio <wav-or-audio-file> [--expect <code>] [--save <name>]
+control-openbard cleanup
+
+Env:
+  OPENBARD_ROOT                 repo root (default: detected from this script)
+  OPENBARD_VERIFY_RUN_ID        instance id (default: default)
+  OPENBARD_VERIFY_STATE_DIR     pid/log dir (default: /tmp/openbard-verify-run-<id>)
+  OPENBARD_VERIFY_EVIDENCE_DIR  proof dir (default: /tmp/openbard-verify-evidence)
+  OPENBARD_VERIFY_HOST          bind/listen host (default: 127.0.0.1)
+  OPENBARD_VERIFY_PORT          bind/listen port (default: 18765)
+EOF
+}
+
+require_repo() {
+	[[ -f "${worker_dir}/app/main.py" ]] || die "worker/app/main.py not found under ${repo_root}"
+}
+
+load_state() {
+	[[ -f "${state_file}" ]] || die "no state file at ${state_file}. Run launch first."
+	# shellcheck disable=SC1090
+	source "${state_file}"
+	host="${OPENBARD_VERIFY_HOST}"
+	port="${OPENBARD_VERIFY_PORT}"
+	base_url="${OPENBARD_VERIFY_URL}"
+	pid="${OPENBARD_VERIFY_PID}"
+}
+
+port_is_open() {
+	local check_host=$1
+	local check_port=$2
+	python3 - "$check_host" "$check_port" <<'PY'
+import socket
+import sys
+
+host, port = sys.argv[1], int(sys.argv[2])
+sock = socket.socket()
+sock.settimeout(0.3)
+try:
+    result = sock.connect_ex((host, port))
+finally:
+    sock.close()
+sys.exit(0 if result == 0 else 1)
+PY
+}
+
+wait_for_health() {
+	local deadline=$((SECONDS + ready_timeout_s))
+	local body=""
+	while ((SECONDS < deadline)); do
+		if body=$(curl -sS --max-time 2 "http://${host}:${port}/health" 2>/dev/null); then
+			if [[ "${body}" == '{"status":"ok"}' ]]; then
+				return 0
+			fi
+		fi
+		sleep 0.2
+	done
+	return 1
+}
+
+write_state() {
+	local pid=$1
+	mkdir -p "${state_dir}"
+	cat >"${state_file}" <<EOF
+OPENBARD_VERIFY_RUN_ID=$(printf '%q' "${run_id}")
+OPENBARD_VERIFY_HOST=$(printf '%q' "${host}")
+OPENBARD_VERIFY_PORT=$(printf '%q' "${port}")
+OPENBARD_VERIFY_PID=$(printf '%q' "${pid}")
+OPENBARD_VERIFY_URL=$(printf '%q' "http://${host}:${port}")
+OPENBARD_VERIFY_LOG=$(printf '%q' "${log_file}")
+EOF
+}
+
+reap_stale_state() {
+	[[ -f "${state_file}" ]] || return 0
+	# shellcheck disable=SC1090
+	source "${state_file}"
+	local stale_pid="${OPENBARD_VERIFY_PID:-}"
+	if [[ -n "${stale_pid}" ]] && pid_is_our_uvicorn "${stale_pid}"; then
+		kill -TERM "${stale_pid}" 2>/dev/null || true
+		sleep 0.4
+		kill -KILL "${stale_pid}" 2>/dev/null || true
+	fi
+	rm -f "${state_file}"
+}
+
+pid_is_our_uvicorn() {
+	local check_pid=$1
+	[[ -d "/proc/${check_pid}" ]] || return 1
+	local cmdline
+	cmdline=$(tr '\0' ' ' <"/proc/${check_pid}/cmdline")
+	[[ "${cmdline}" == *uvicorn* ]] || return 1
+	[[ "${cmdline}" == *app.main:app* ]] || return 1
+	return 0
+}
+
+cmd_launch() {
+	require_repo
+	command -v uv >/dev/null || die "uv not on PATH. Install https://docs.astral.sh/uv/ and retry."
+	command -v curl >/dev/null || die "curl is required"
+
+	if [[ -f "${state_file}" ]] && (cmd_doctor) >/dev/null 2>&1; then
+		load_state
+		echo "already running"
+		echo "url=${OPENBARD_VERIFY_URL}"
+		echo "pid=${OPENBARD_VERIFY_PID}"
+		return 0
+	fi
+	reap_stale_state
+
+	if port_is_open "${host}" "${port}"; then
+		die "port ${host}:${port} is already in use by another process. Set OPENBARD_VERIFY_PORT to a free port. Do not kill a process you did not start."
+	fi
+
+	(
+		cd "${worker_dir}"
+		uv sync --frozen
+	)
+
+	[[ -x "${uvicorn_bin}" ]] || die "missing ${uvicorn_bin} after uv sync --frozen"
+
+	mkdir -p "${state_dir}"
+	: >"${log_file}"
+
+	# Bind via the venv binary so the stored PID is the listening process.
+	# Do not pass --reload. The reloader parent does not own the port.
+	(
+		cd "${worker_dir}"
+		exec "${uvicorn_bin}" app.main:app --host "${host}" --port "${port}" --log-level info
+	) >>"${log_file}" 2>&1 &
+	local pid
+	pid=$!
+
+	if ! wait_for_health; then
+		echo "control-openbard: worker did not become ready within ${ready_timeout_s}s" >&2
+		echo "--- ${log_file} ---" >&2
+		tail -n 80 "${log_file}" >&2 || true
+		kill -TERM "${pid}" 2>/dev/null || true
+		sleep 0.5
+		kill -KILL "${pid}" 2>/dev/null || true
+		rm -f "${state_file}"
+		exit 1
+	fi
+
+	pid_is_our_uvicorn "${pid}" || die "started pid ${pid} but cmdline is not uvicorn app.main:app"
+	write_state "${pid}"
+	echo "url=http://${host}:${port}"
+	echo "pid=${pid}"
+	echo "log=${log_file}"
+	echo "ready line should match: Uvicorn running on http://${host}:${port}"
+}
+
+cmd_doctor() {
+	require_repo
+	load_state
+	pid_is_our_uvicorn "${pid}" || die "pid ${pid} is not a live uvicorn app.main:app process"
+	port_is_open "${host}" "${port}" || die "pid ${pid} is live but ${host}:${port} is not accepting TCP"
+
+	local health title
+	health=$(curl -sS --max-time 5 "${base_url}/health")
+	[[ "${health}" == '{"status":"ok"}' ]] || die "GET /health returned ${health}"
+
+	title=$(
+		curl -sS --max-time 5 "${base_url}/openapi.json" |
+			python3 -c 'import json,sys; print(json.load(sys.stdin)["info"]["title"])'
+	)
+	[[ "${title}" == "openBard Worker" ]] || die "openapi title is ${title}, expected openBard Worker"
+
+	echo "ok"
+	echo "url=${base_url}"
+	echo "pid=${pid}"
+	echo "title=${title}"
+	echo "health=${health}"
+}
+
+cmd_url() {
+	load_state
+	echo "${base_url}"
+}
+
+parse_http_flags() {
+	expect_code=""
+	save_name=""
+	positional=()
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		--expect)
+			[[ $# -ge 2 ]] || die "--expect needs a status code"
+			expect_code=$2
+			shift 2
+			;;
+		--save)
+			[[ $# -ge 2 ]] || die "--save needs a name"
+			save_name=$2
+			shift 2
+			;;
+		-h | --help)
+			usage
+			exit 0
+			;;
+		-*)
+			die "unknown flag $1"
+			;;
+		*)
+			positional+=("$1")
+			shift
+			;;
+		esac
+	done
+}
+
+save_response() {
+	local name=$1
+	local request_line=$2
+	local status=$3
+	local headers_file=$4
+	local body_file=$5
+	local content_type=$6
+
+	local dest="${evidence_dir}/${name}"
+	mkdir -p "${dest}"
+	printf '%s\n' "${request_line}" >"${dest}/request.txt"
+	printf '%s\n' "${status}" >"${dest}/status.txt"
+	cp "${headers_file}" "${dest}/headers.txt"
+
+	local body_name="body.bin"
+	case "${content_type}" in
+	application/json*)
+		if python3 -m json.tool "${body_file}" >"${dest}/body.json"; then
+			body_name="body.json"
+		else
+			rm -f "${dest}/body.json"
+			cp "${body_file}" "${dest}/${body_name}"
+		fi
+		;;
+	audio/wav* | audio/x-wav*)
+		body_name="body.wav"
+		cp "${body_file}" "${dest}/${body_name}"
+		;;
+	*)
+		cp "${body_file}" "${dest}/${body_name}"
+		;;
+	esac
+
+	{
+		echo "url=$(cmd_url)"
+		echo "request=${request_line}"
+		echo "status=${status}"
+		echo "content_type=${content_type}"
+		echo "body=${dest}/${body_name}"
+	} >"${dest}/summary.txt"
+
+	echo "evidence=${dest}"
+}
+
+run_curl() {
+	local request_line=$1
+	shift
+
+	load_state
+	pid_is_our_uvicorn "${pid}" || die "refusing to drive pid ${pid}; run doctor"
+	port_is_open "${host}" "${port}" || die "refusing to drive ${host}:${port}; run doctor"
+
+	local tmp
+	tmp=$(mktemp -d "${TMPDIR:-/tmp}/openbard-verify-curl.XXXXXX")
+	local status
+	status=$(
+		curl -sS --max-time "${http_timeout_s}" \
+			-D "${tmp}/headers.txt" \
+			-o "${tmp}/body" \
+			-w '%{http_code}' \
+			"$@"
+	)
+	local content_type
+	content_type=$(
+		python3 - "${tmp}/headers.txt" <<'PY'
+import sys
+from email.parser import HeaderParser
+
+text = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+if text.startswith("HTTP/"):
+    text = text.split("\n", 1)[1]
+print(HeaderParser().parsestr(text).get("content-type", ""))
+PY
+	)
+
+	echo "status=${status}"
+	echo "content_type=${content_type}"
+
+	if [[ -n "${save_name}" ]]; then
+		save_response "${save_name}" "${request_line}" "${status}" "${tmp}/headers.txt" "${tmp}/body" "${content_type}"
+	fi
+
+	if [[ -z "${save_name}" ]]; then
+		if [[ "${content_type}" == application/json* ]]; then
+			python3 -m json.tool "${tmp}/body"
+		fi
+	fi
+
+	rm -rf "${tmp}"
+
+	if [[ -n "${expect_code}" && "${status}" != "${expect_code}" ]]; then
+		die "expected HTTP ${expect_code}, got ${status}"
+	fi
+}
+
+cmd_get() {
+	parse_http_flags "$@"
+	[[ ${#positional[@]} -eq 1 ]] || die "get needs exactly one path, for example /health"
+	local path=${positional[0]}
+	[[ "${path}" == /* ]] || die "path must start with /"
+	load_state
+	run_curl "GET ${base_url}${path}" "${base_url}${path}"
+}
+
+cmd_post_audio() {
+	parse_http_flags "$@"
+	[[ ${#positional[@]} -eq 1 ]] || die "post-audio needs exactly one file path"
+	local file=${positional[0]}
+	[[ "${file}" == /* ]] || file="${repo_root}/${file}"
+	[[ -f "${file}" ]] || die "audio file not found: ${file}"
+	load_state
+	run_curl "POST ${base_url}/v1/transcriptions audio=@${file}" \
+		-F "audio=@${file}" \
+		"${base_url}/v1/transcriptions"
+}
+
+cmd_cleanup() {
+	if [[ ! -f "${state_file}" ]]; then
+		echo "nothing to clean"
+		return 0
+	fi
+	# shellcheck disable=SC1090
+	source "${state_file}"
+	local pid="${OPENBARD_VERIFY_PID}"
+	if [[ -n "${pid}" ]] && [[ -d "/proc/${pid}" ]]; then
+		kill -TERM "${pid}" 2>/dev/null || true
+		local deadline=$((SECONDS + 8))
+		while [[ -d "/proc/${pid}" ]] && ((SECONDS < deadline)); do
+			sleep 0.1
+		done
+		if [[ -d "/proc/${pid}" ]]; then
+			kill -KILL "${pid}" 2>/dev/null || true
+		fi
+	fi
+	rm -rf "${state_dir}"
+	echo "cleaned state_dir=${state_dir}"
+	echo "evidence kept at ${evidence_dir}"
+}
+
+main() {
+	[[ $# -ge 1 ]] || {
+		usage
+		exit 1
+	}
+	local cmd=$1
+	shift
+	case "${cmd}" in
+	launch) cmd_launch "$@" ;;
+	doctor) cmd_doctor "$@" ;;
+	url) cmd_url "$@" ;;
+	get) cmd_get "$@" ;;
+	post-audio) cmd_post_audio "$@" ;;
+	cleanup) cmd_cleanup "$@" ;;
+	-h | --help | help) usage ;;
+	*)
+		usage >&2
+		die "unknown command ${cmd}"
+		;;
+	esac
+}
+
+main "$@"
