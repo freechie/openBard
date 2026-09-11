@@ -3,13 +3,75 @@
 openBard is an experimental iOS app. It turns recorded or imported music into
 editable notes, then later into sheet music.
 
-**Shipped today:** JSON contract, FastAPI worker with live Basic Pitch on
-upload, iOS piano-roll edit loop, ScoreBuilder staff preview, MIDI and
-MusicXML export from locked notes.
-**Not shipped:** on-device inference, guided recording.
-The iOS app still loads bundled JSON; it does not call the worker.
+![openBard piano roll on iOS](docs/ios-piano-roll.jpg)
 
-Status, shipped checklist, and next work: **[STATUS.md](STATUS.md)**.
+**Shipped today:** JSON contract, FastAPI worker with live Basic Pitch on
+upload, blank-first Ableton-style piano roll (Draw, BPM, overview zoom,
+synth Play), ScoreBuilder staff from all notes, MIDI and MusicXML export.
+**Not shipped:** on-device inference, guided recording, app→worker wiring.
+The iOS app edits notes locally; it does not call the worker.
+
+## Status
+
+**Updated:** 2026-09-11
+
+### Next
+
+1. Phase 4: guided recording + on-device Basic Pitch (app still does not call the worker).
+2. Edit polish: multi-select, undo/redo, velocity-lane pin editing, richer overview chrome.
+3. Validate MusicXML in MuseScore; document rhythm/key export limits.
+
+### Shipped
+
+#### Phase 0 — Prototype baseline
+- Transcription JSON schema + example (`contracts/`)
+- FastAPI worker: `GET /health`, `GET /v1/transcriptions/demo`, `GET /v1/audio/demo`
+- Fake engine for demo/contract tests
+- SwiftUI app + WAV import-for-playback (reference listen only)
+
+#### Phase 1 — Engine decision
+- Fixtures: `isolated-piano.wav`, `mixed-arrangement.wav` + ground truth
+- **Basic Pitch** chosen for publishable MVP (solo/isolated polyphonic)
+- Eval on isolated piano: 100% recall, 0 long spurious notes, ~0.5s latency, Apache-2.0
+- MuScriptor: research only (gated HF weights, CC BY-NC 4.0) — not for App Store without written permission
+- Artifacts: `fixtures/basic-pitch-eval-results.json`, `scripts/eval_*.py`, `scripts/check_basicpitch_eval.py` in CI
+
+#### Phase 2 / 2b — Piano roll and edit loop
+- `Transcriber` adapter; **`BasicPitchTranscriber`** on `POST /v1/transcriptions` (live inference)
+- Demo GET still fake `dsp_v0`; amplitude mapped to velocity + confidence (no invented 1.0)
+- Contract: optional tempo/key, `onset_uncertainty_seconds`, `basic_pitch` engine enum
+- **Blank-first launch** (`manual` engine, Draw on); Library fixtures optional; New blank resets the roll
+- Ableton-inspired chrome: keyboard gutter, beat grid, velocity lane, transport (BPM default **120**, Play/Stop, Draw)
+- **Clip overview hotspot** — drag/resize visible time window; pinch also zooms time
+- Stable pitch viewport (no reflow under finger); drag move; **L/R edge resize**
+- Split / merge / delete; Play **synthesizes** current note events (not fixture WAV)
+- Worker + iOS unit tests; fixture-backed Basic Pitch recall check in `./scripts/verify`
+
+#### Phase 3 — Score + export
+- `ScoreBuilder` from **all notes** (no lock gate); uses transport BPM when set
+- Staff preview on Score workspace as soon as the roll has notes
+- **MIDI export** (Format 0 SMF) via Score workspace ShareLink
+- **MusicXML export** (partwise 3.1) via Score workspace ShareLink
+  - Limits: C major key only, no dotted rhythm encoding, rests typed but simple; validate in MuseScore
+
+### Not shipped
+
+| Area | Gap |
+| --- | --- |
+| Export | MuseScore validation notes; richer rhythm/key encoding |
+| iOS ↔ engine | App does **not** call the worker; no on-device Basic Pitch yet |
+| Import | User audio is reference playback only; does not re-transcribe onto the roll |
+| Recording | No live capture, meters, or guided UX |
+| Edit polish | Undo/redo, multi-select, velocity pins, persist edited JSON |
+| Research | MuScriptor multi-instrument; per-instrument models; larger fixture set |
+
+### Honest limitations
+
+- Worker live path needs a Basic Pitch backend (CoreML on macOS; TF/TFLite/ONNX elsewhere). `setuptools` pinned `<81` for `resampy` (CI ignores PYSEC-2026-3447).
+- Basic Pitch has no tempo/key; those fields stay null on live POST. App tempo is user-editable (default 120).
+- Precision on isolated piano was ~57% (extra harmonics/phantoms); users edit the roll before trusting Score/export.
+- Staff preview is deterministic for known patterns, not publication-ready engraving.
+- Note playback is a simple sine preview, not a sampled instrument.
 
 ## Product direction
 
@@ -45,9 +107,9 @@ tested separately.
    scores, onset uncertainty, and possible octave or harmonic flags before any
    ScoreBuilder pass. Users see what the model detected.
 
-4. **Edit, then lock, then score.** Start on a blank roll, Draw notes, Play to
-   hear a synth preview, then lock and build the staff. Fixtures remain optional
-   in Library.
+4. **Edit, then score.** Start on a blank roll, Draw notes, Play a synth
+   preview, reshape timing on a stable viewport (overview / pinch zoom), then
+   open Score. Fixtures remain optional in Library. No lock step.
 
 5. **Fixture checks in CI.** Each model change must report recall and
    spurious-note rates on known chords and scales. An accuracy drop needs an
@@ -63,8 +125,8 @@ tested separately.
   model (Basic Pitch).
 - Show raw transcription on an unquantized piano roll, including confidence,
   onset uncertainty, and harmonic or octave flags.
-- Split, merge, or drag notes. Lock confirmed events.
-- Convert locked note events into a staff preview with ScoreBuilder.
+- Draw, split, merge, drag, and resize notes; synth-preview playback.
+- Convert note events into a staff preview with ScoreBuilder.
 - Export MIDI and MusicXML for other notation software.
 - CI checks recall and spurious-note rates on known fixtures.
 
@@ -90,7 +152,7 @@ flowchart LR
     A["Audio input + recording meters"] --> B["Transcriber adapter"]
     B --> C["Raw note events + confidence"]
     C --> D["Piano-roll editor"]
-    D --> E["Validated note events"]
+    D --> E["Edited note events"]
     E --> F["ScoreBuilder"]
     F --> G["Staff preview"]
     F --> H["MIDI / MusicXML export"]
@@ -98,11 +160,11 @@ flowchart LR
 
 The transcription JSON stores what was heard, in seconds, including confidence
 and onset uncertainty. The piano-roll editor shows those fields and lets users
-split, merge, or drag notes before locking them. After lock, `ScoreBuilder`
-estimates beats and measures, quantizes durations, assigns voices, and creates
-rests and ties.
+draw, split, merge, drag, and resize notes. `ScoreBuilder` takes the current
+note list, estimates or uses transport BPM, quantizes durations, and creates
+rests and ties for the staff preview and exports.
 
-ScoreBuilder runs only on locked notes. The staff is not the raw model output.
+Staff preview is quantized notation, not the raw model output.
 
 Model-specific dependencies and output mapping live behind a small transcriber
 interface. Per-instrument models can load one at a time. Do not add a plugin
@@ -136,7 +198,8 @@ A public App Store build requires all of the following:
 ## Repository layout
 
 ```text
-STATUS.md   Shipped / next / gaps (read this for progress)
+README.md   Product direction + status (shipped / next / gaps)
+docs/       Screenshots and other docs assets
 contracts/  Shared JSON schema and example transcription
 fixtures/   Audio fixtures, ground truth, eval results
 ios/        SwiftUI application and iOS tests
@@ -168,6 +231,7 @@ Endpoints:
 ```bash
 # from repo root, with worker running
 curl -F "audio=@fixtures/c-major-chord.wav" http://127.0.0.1:8000/v1/transcriptions
+# expect engine basic_pitch, pitches 60/64/67
 ```
 
 Worker tests: `cd worker && uv run pytest -q`
@@ -188,9 +252,13 @@ without code signing. GitHub Actions runs the same command on `macos-26`.
 open ios/OpenBard/OpenBard.xcodeproj
 ```
 
-The app loads bundled transcription JSON and WAV fixtures. It shows a piano
-roll, edit toolbar, Score viewport (empty until Lock all), Play, and
-Import audio (playback only). It does not call the worker.
+Launch is a **blank** piano roll with Draw on and BPM 120. Draw notes, resize
+edges, pinch or use the clip overview to zoom time, Play for a sine synth
+preview, then switch to Score for staff + MIDI/MusicXML export. Library can
+load fixtures or import audio for reference playback. The app does not call
+the worker.
+
+Quick path: blank roll → Draw notes → Play synth → Score staff → export.
 
 ## License
 
