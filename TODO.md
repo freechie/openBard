@@ -34,9 +34,11 @@ for full acceptance criteria.
 
 ## Future Phases
 
-**Phase 3:**
-- [ ] ScoreBuilder with quantization
+**Phase 3 (export still open):**
+- [x] ScoreBuilder with quantization from locked notes and staff preview
 - [ ] MusicXML / MIDI export
+
+**Phase 4:**
 - [ ] Guided recording UI
 
 **Future enhancements:**

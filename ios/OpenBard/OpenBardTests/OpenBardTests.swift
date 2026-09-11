@@ -45,11 +45,11 @@ struct OpenBardTests {
         
         let isolatedPianoTranscription = try TranscriptionLoader.loadFixture(.isolatedPiano, from: bundle)
         #expect(isolatedPianoTranscription != nil)
-        #expect(isolatedPianoTranscription?.noteEvents.count == 12)
+        #expect(isolatedPianoTranscription?.noteEvents.count == 21)
         
         let mixedTranscription = try TranscriptionLoader.loadFixture(.mixedArrangement, from: bundle)
         #expect(mixedTranscription != nil)
-        #expect(mixedTranscription?.noteEvents.count == 32)
+        #expect(mixedTranscription?.noteEvents.count == 37)
         
         let cMajorTranscription = try TranscriptionLoader.loadFixture(.cMajorChord, from: bundle)
         #expect(cMajorTranscription == nil)
@@ -256,5 +256,133 @@ struct OpenBardTests {
             #expect(expectedLabelY >= 0)
             #expect(expectedLabelY <= size.height)
         }
+    }
+
+    @Test func pianoRollKeepsIsolatedPianoNotesVisible() throws {
+        let bundle = Bundle(for: TestBundleMarker.self)
+        let transcription = try TranscriptionLoader.loadFixture(.isolatedPiano, from: bundle)
+        let notes = try #require(transcription?.noteEvents)
+        let size = CGSize(width: 320, height: 200)
+        let frames = PianoRollLayout.frames(notes: notes, in: size)
+
+        #expect(frames.count == 21)
+        #expect(frames.allSatisfy { $0.width >= 2 && $0.height >= 2 })
+        #expect(frames.allSatisfy { $0.minY >= 0 && $0.maxY <= size.height + 0.5 })
+    }
+
+    @Test func scoreBuilderReturnsNilWithoutLockedNotes() {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble)
+        ]
+        #expect(ScoreBuilder.build(from: notes) == nil)
+    }
+
+    @Test func scoreBuilderIgnoresUnlockedNotes() {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true),
+            NoteEvent(pitchMidi: 72, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble)
+        ]
+        let score = ScoreBuilder.build(from: notes)
+        #expect(score != nil)
+        let noteCount = score!.measures.flatMap(\.items).filter {
+            if case .note = $0 { return true }
+            return false
+        }.count
+        #expect(noteCount == 1)
+    }
+
+    @Test func scoreBuilderQuantizesLockedCMajorChordToOneMeasure() {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true),
+            NoteEvent(pitchMidi: 64, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true),
+            NoteEvent(pitchMidi: 67, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true)
+        ]
+        let score = ScoreBuilder.build(from: notes)
+        #expect(score != nil)
+        #expect(score!.tempoBpm == 120)
+        #expect(score!.clef == .treble)
+        #expect(score!.measures.count == 1)
+        let notesInScore = score!.measures[0].items.compactMap { item -> ScoreNote? in
+            if case .note(let note) = item { return note }
+            return nil
+        }
+        #expect(notesInScore.map(\.pitchMidi) == [60, 64, 67])
+        #expect(notesInScore.allSatisfy { $0.startBeat == 0 && $0.durationBeats == 4 && !$0.tiedToNext })
+        #expect(!score!.measures[0].items.contains { if case .rest = $0 { return true }; return false })
+    }
+
+    @Test func scoreBuilderInsertsTrailingRestAfterQuarter() {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 0.5, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true)
+        ]
+        let score = ScoreBuilder.build(from: notes)
+        #expect(score != nil)
+        #expect(score!.measures.count == 1)
+        guard case .note(let note) = score!.measures[0].items.first else {
+            #expect(Bool(false))
+            return
+        }
+        #expect(note.durationBeats == 1)
+        guard case .rest(let rest) = score!.measures[0].items.last else {
+            #expect(Bool(false))
+            return
+        }
+        #expect(rest.startBeat == 1)
+        #expect(rest.durationBeats == 3)
+    }
+
+    @Test func scoreBuilderTiesNoteAcrossBarline() {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 1.5, durationSeconds: 1.0, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true)
+        ]
+        let score = ScoreBuilder.build(from: notes)
+        #expect(score != nil)
+        #expect(score!.tempoBpm == 120)
+        #expect(score!.measures.count == 2)
+        let firstNotes = score!.measures[0].items.compactMap { item -> ScoreNote? in
+            if case .note(let note) = item { return note }
+            return nil
+        }
+        let secondNotes = score!.measures[1].items.compactMap { item -> ScoreNote? in
+            if case .note(let note) = item { return note }
+            return nil
+        }
+        #expect(firstNotes.count == 1)
+        #expect(firstNotes[0].startBeat == 3)
+        #expect(firstNotes[0].durationBeats == 1)
+        #expect(firstNotes[0].tiedToNext)
+        #expect(secondNotes.count == 1)
+        #expect(secondNotes[0].startBeat == 4)
+        #expect(secondNotes[0].durationBeats == 1)
+        #expect(!secondNotes[0].tiedToNext)
+    }
+
+    @Test func zoomMathClampsScale() {
+        #expect(ZoomMath.clamp(0) == ZoomMath.minimum)
+        #expect(ZoomMath.clamp(1) == 1)
+        #expect(ZoomMath.clamp(99) == ZoomMath.maximum)
+    }
+
+    @Test func zoomMathScalesContentToViewport() {
+        let size = ZoomMath.contentSize(viewport: CGSize(width: 100, height: 50), scale: 2)
+        #expect(size.width == 200)
+        #expect(size.height == 100)
+    }
+
+    @Test func zoomMathClampsPanToScaledExtra() {
+        let offset = ZoomMath.clampOffset(
+            CGSize(width: 5000, height: -5000),
+            viewport: CGSize(width: 100, height: 80),
+            scale: 2
+        )
+        #expect(offset.width == 74)
+        #expect(offset.height == -64)
+    }
+
+    @Test func staffLineSpacingGrowsWithViewportHeight() {
+        let small = StaffLayout.lineSpacing(in: CGSize(width: 320, height: 96))
+        let large = StaffLayout.lineSpacing(in: CGSize(width: 320, height: 240))
+        #expect(large > small)
+        #expect(small >= 8)
     }
 }

@@ -34,6 +34,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				"c-major-chord.wav",
+				"isolated-piano-basicpitch.json",
 				"isolated-piano-ground-truth.json",
 				"isolated-piano.wav",
 				"mixed-arrangement-ground-truth.json",
