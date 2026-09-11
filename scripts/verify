@@ -11,8 +11,14 @@ repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
   # TensorFlow 2.15 (via basic-pitch) pins protobuf 4.x. PYSEC-2026-1805 is
   # fixed in protobuf 5.29.6 / 6.33.5 only. The worker does not parse untrusted
   # protobuf JSON through json_format.ParseDict.
+  #
+  # PYSEC-2026-3447 (setuptools <83 MANIFEST.in NFC/NFD exclude bypass) is
+  # fixed in setuptools 83+, but that release drops pkg_resources and breaks
+  # resampy → basic-pitch. Pin stays setuptools>=75,<81. Worker does not build
+  # sdists with setuptools FileList.
   uvx --from pip-audit pip-audit --path .venv/lib/python3.11/site-packages \
-    --ignore-vuln PYSEC-2026-1805
+    --ignore-vuln PYSEC-2026-1805 \
+    --ignore-vuln PYSEC-2026-3447
   uvx bandit -q -r app
 )
 

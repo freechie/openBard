@@ -129,7 +129,7 @@ struct OpenBardTests {
         #expect(NoteHelpers.splitNote(shortNote) == nil)
     }
     
-    @Test func splitRejectsLockedNotes() {
+    @Test func splitWorksEvenIfLegacyLockFlagSet() {
         let lockedNote = NoteEvent(
             pitchMidi: 60,
             onsetSeconds: 0,
@@ -139,8 +139,10 @@ struct OpenBardTests {
             staffHint: .treble,
             isLocked: true
         )
-        
-        #expect(NoteHelpers.splitNote(lockedNote) == nil)
+
+        let split = NoteHelpers.splitNote(lockedNote)
+        #expect(split != nil)
+        #expect(split!.0.durationSeconds == 1.0)
     }
     
     @Test func mergeAdjacentNotes() {
@@ -178,11 +180,13 @@ struct OpenBardTests {
         #expect(NoteHelpers.mergeNotes(note1, note2) == nil)
     }
     
-    @Test func mergeRejectsLockedNotes() {
+    @Test func mergeWorksEvenIfLegacyLockFlagSet() {
         let note1 = NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 1.0, velocity: 0.8, confidence: 0.9, staffHint: .treble, isLocked: true)
         let note2 = NoteEvent(pitchMidi: 60, onsetSeconds: 1.0, durationSeconds: 1.0, velocity: 0.8, confidence: 0.9, staffHint: .treble)
-        
-        #expect(NoteHelpers.mergeNotes(note1, note2) == nil)
+
+        let merged = NoteHelpers.mergeNotes(note1, note2)
+        #expect(merged != nil)
+        #expect(merged!.durationSeconds == 2.0)
     }
     
     @Test func nudgeAdjustsTiming() {
@@ -217,6 +221,106 @@ struct OpenBardTests {
         #expect(nudged != nil)
         #expect(nudged!.onsetSeconds == 0)
     }
+
+    @Test func pianoRollEditMovesFromSnapshotNotCumulatively() {
+        let note = NoteEvent(pitchMidi: 60, onsetSeconds: 1.0, durationSeconds: 1.0, velocity: 0.8, confidence: 1, staffHint: .treble)
+        let snapshot = PianoRollEdit.snapshot(of: note)
+        let scales = PianoRollEdit.Scales(secondsPerPoint: 0.01, rowHeight: 20)
+
+        let moved = PianoRollEdit.movedNote(
+            from: snapshot,
+            translation: CGSize(width: 50, height: -20),
+            scales: scales,
+            base: note
+        )
+
+        #expect(moved != nil)
+        #expect(moved!.onsetSeconds == 1.5)
+        #expect(moved!.pitchMidi == 61)
+
+        // Same translation again from snapshot must yield the same result (not accumulate).
+        let again = PianoRollEdit.movedNote(
+            from: snapshot,
+            translation: CGSize(width: 50, height: -20),
+            scales: scales,
+            base: moved!
+        )
+        #expect(again!.onsetSeconds == 1.5)
+        #expect(again!.pitchMidi == 61)
+    }
+
+    @Test func pianoRollEditResizesDurationFromRightEdge() {
+        let note = NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 1.0, velocity: 0.8, confidence: 1, staffHint: .treble)
+        let snapshot = PianoRollEdit.snapshot(of: note)
+        let scales = PianoRollEdit.Scales(secondsPerPoint: 0.01, rowHeight: 20)
+
+        let longer = PianoRollEdit.resizedNote(
+            from: snapshot,
+            translation: CGSize(width: 100, height: 0),
+            scales: scales,
+            base: note
+        )
+        #expect(longer!.durationSeconds == 2.0)
+
+        let clamped = PianoRollEdit.resizedNote(
+            from: snapshot,
+            translation: CGSize(width: -10_000, height: 0),
+            scales: scales,
+            base: note
+        )
+        #expect(clamped!.durationSeconds == NoteHelpers.minimumNoteDurationSeconds)
+    }
+
+    @Test func pianoRollEditAllowsNotesRegardlessOfLegacyLockFlag() {
+        let note = NoteEvent(
+            pitchMidi: 60,
+            onsetSeconds: 0,
+            durationSeconds: 1,
+            velocity: 0.8,
+            confidence: 1,
+            staffHint: .treble,
+            isLocked: true
+        )
+        let snapshot = PianoRollEdit.snapshot(of: note)
+        let scales = PianoRollEdit.Scales(secondsPerPoint: 0.01, rowHeight: 20)
+        #expect(
+            PianoRollEdit.movedNote(
+                from: snapshot,
+                translation: CGSize(width: 10, height: -20),
+                scales: scales,
+                base: note
+            ) != nil
+        )
+        #expect(
+            PianoRollEdit.resizedNote(
+                from: snapshot,
+                translation: CGSize(width: 10, height: 0),
+                scales: scales,
+                base: note
+            ) != nil
+        )
+    }
+
+    @Test func pianoRollEditResizesFromLeftEdge() {
+        let note = NoteEvent(pitchMidi: 60, onsetSeconds: 1.0, durationSeconds: 1.0, velocity: 0.8, confidence: 1, staffHint: .treble)
+        let snapshot = PianoRollEdit.snapshot(of: note)
+        let scales = PianoRollEdit.Scales(secondsPerPoint: 0.01, rowHeight: 20)
+        let edited = PianoRollEdit.resizedNoteFromLeft(
+            from: snapshot,
+            translation: CGSize(width: 50, height: 0),
+            scales: scales,
+            base: note
+        )
+        #expect(edited!.onsetSeconds == 1.5)
+        #expect(edited!.durationSeconds == 0.5)
+        #expect(PianoRollEdit.edgeHit(frame: CGRect(x: 40, y: 10, width: 100, height: 20), point: CGPoint(x: 45, y: 20)) == .left)
+    }
+
+    @Test func pianoRollEditDetectsRightEdgeHit() {
+        let frame = CGRect(x: 40, y: 10, width: 100, height: 20)
+        #expect(PianoRollEdit.isRightEdgeHit(frame: frame, point: CGPoint(x: 135, y: 20)))
+        #expect(!PianoRollEdit.isRightEdgeHit(frame: frame, point: CGPoint(x: 60, y: 20)))
+    }
     
     @Test func findsMergeCandidate() {
         let notes = [
@@ -235,26 +339,19 @@ struct OpenBardTests {
             NoteEvent(pitchMidi: 64, onsetSeconds: 0.5, durationSeconds: 1.0, velocity: 0.8, confidence: 1, staffHint: .treble),
             NoteEvent(pitchMidi: 67, onsetSeconds: 1.0, durationSeconds: 1.0, velocity: 0.8, confidence: 1, staffHint: .treble)
         ]
-        let size = CGSize(width: 300, height: 150)
-        let frames = PianoRollLayout.frames(notes: notes, in: size)
-        
-        let pitches = notes.map(\.pitchMidi)
-        guard let minPitch = pitches.min(), let maxPitch = pitches.max() else {
-            #expect(Bool(false))
-            return
-        }
-        
-        let pitchSpan = maxPitch - minPitch
-        let rowHeight = size.height / CGFloat(pitchSpan + 1)
-        
+        let size = CGSize(width: 300, height: 220)
+        let viewport = PianoRollViewport.seeded(from: notes, tempoBpm: 120)
+        let frames = PianoRollLayout.frames(notes: notes, viewport: viewport, in: size)
+        let metrics = PianoRollLayout.metrics(viewport: viewport, in: size)
+
         for (index, note) in notes.enumerated() {
             let frame = frames[index]
-            let expectedLabelY = CGFloat(maxPitch - note.pitchMidi) * rowHeight + rowHeight / 2
-            let frameCenterY = frame.midY
-            
-            #expect(abs(expectedLabelY - frameCenterY) < rowHeight / 2)
-            #expect(expectedLabelY >= 0)
-            #expect(expectedLabelY <= size.height)
+            let expectedCenterY = metrics.contentMinY
+                + CGFloat(viewport.maxPitch - note.pitchMidi) * metrics.rowHeight
+                + metrics.rowHeight / 2
+            #expect(abs(expectedCenterY - frame.midY) < metrics.rowHeight / 2)
+            #expect(frame.minY >= metrics.contentMinY - 0.5)
+            #expect(frame.maxY <= metrics.velocityMinY + 0.5)
         }
     }
 
@@ -262,12 +359,13 @@ struct OpenBardTests {
         let bundle = Bundle(for: TestBundleMarker.self)
         let transcription = try TranscriptionLoader.loadFixture(.isolatedPiano, from: bundle)
         let notes = try #require(transcription?.noteEvents)
-        let size = CGSize(width: 320, height: 200)
+        let size = CGSize(width: 320, height: 280)
         let frames = PianoRollLayout.frames(notes: notes, in: size)
+        let metrics = PianoRollLayout.metrics(notes: notes, in: size)
 
         #expect(frames.count == 21)
         #expect(frames.allSatisfy { $0.width >= 2 && $0.height >= 2 })
-        #expect(frames.allSatisfy { $0.minY >= 0 && $0.maxY <= size.height + 0.5 })
+        #expect(frames.allSatisfy { $0.minY >= metrics.contentMinY - 0.5 && $0.maxY <= metrics.velocityMinY + 0.5 })
     }
 
     @Test func pianoRollHitTestSelectsPitchRowNotTopNoteEverywhere() {
@@ -311,25 +409,101 @@ struct OpenBardTests {
         #expect(!transcription.noteEvents[0].isLocked)
     }
 
-    @Test func scoreBuilderReturnsNilWithoutLockedNotes() {
-        let notes = [
-            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble)
-        ]
-        #expect(ScoreBuilder.build(from: notes) == nil)
+    @Test func midiExportRequiresNotes() {
+        #expect(throws: MIDIExportError.noNotes) {
+            try MIDIExporter.makeData(from: [])
+        }
     }
 
-    @Test func scoreBuilderIgnoresUnlockedNotes() {
+    @Test func midiExportWritesFormat0HeaderAndChordPitches() throws {
         let notes = [
             NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true),
+            NoteEvent(pitchMidi: 64, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true),
+            NoteEvent(pitchMidi: 67, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true),
+        ]
+
+        let data = try MIDIExporter.makeData(from: notes, tempoBpm: 120)
+        let bytes = [UInt8](data)
+
+        #expect(String(bytes[0..<4].map { Character(UnicodeScalar($0)) }) == "MThd")
+        #expect(bytes[8] == 0 && bytes[9] == 0) // format 0
+        #expect(bytes[10] == 0 && bytes[11] == 1) // one track
+        #expect(String(bytes[14..<18].map { Character(UnicodeScalar($0)) }) == "MTrk")
+        #expect(bytes.contains(0x90))
+        #expect(bytes.contains(60))
+        #expect(bytes.contains(64))
+        #expect(bytes.contains(67))
+        #expect(MIDIExporter.vlq(0) == [0x00])
+        #expect(MIDIExporter.vlq(127) == [0x7F])
+        #expect(MIDIExporter.vlq(128) == [0x81, 0x00])
+        #expect(MIDIExporter.midiVelocity(0.8) == 102)
+    }
+
+    @Test func musicXMLExportRequiresNotes() {
+        #expect(throws: MusicXMLExportError.noScore) {
+            try MusicXMLExporter.makeData(from: [])
+        }
+    }
+
+    @Test func musicXMLExportWritesPartwiseChord() throws {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true),
+            NoteEvent(pitchMidi: 64, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true),
+            NoteEvent(pitchMidi: 67, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true),
+        ]
+
+        let data = try MusicXMLExporter.makeData(from: notes)
+        let xml = String(decoding: data, as: UTF8.self)
+
+        #expect(xml.contains("score-partwise"))
+        #expect(xml.contains("<divisions>4</divisions>"))
+        #expect(xml.contains("<sign>G</sign>"))
+        #expect(xml.contains("<step>C</step>"))
+        #expect(xml.contains("<step>E</step>"))
+        #expect(xml.contains("<step>G</step>"))
+        #expect(xml.contains("<chord/>"))
+        #expect(xml.contains("<per-minute>"))
+        #expect(MusicXMLExporter.midiToPitch(61).step == "C")
+        #expect(MusicXMLExporter.midiToPitch(61).alter == 1)
+        #expect(MusicXMLExporter.noteType(for: 1.0) == "quarter")
+        #expect(MusicXMLExporter.noteType(for: 0.25) == "16th")
+    }
+
+    @Test func musicXMLExportEmitsTieAcrossBarline() throws {
+        let notes = [
+            NoteEvent(
+                pitchMidi: 60,
+                onsetSeconds: 1.5,
+                durationSeconds: 1.0,
+                velocity: 0.8,
+                confidence: 1,
+                staffHint: .treble,
+                isLocked: true
+            )
+        ]
+        let data = try MusicXMLExporter.makeData(from: notes)
+        let xml = String(decoding: data, as: UTF8.self)
+        #expect(xml.contains(#"<tie type="start"/>"#))
+        #expect(xml.contains(#"<tie type="stop"/>"#))
+        #expect(xml.contains("<measure number=\"2\">"))
+    }
+
+    @Test func scoreBuilderReturnsNilWithoutNotes() {
+        #expect(ScoreBuilder.build(from: []) == nil)
+    }
+
+    @Test func scoreBuilderUsesAllNotesWithoutLock() {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble),
             NoteEvent(pitchMidi: 72, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble)
         ]
-        let score = ScoreBuilder.build(from: notes)
+        let score = ScoreBuilder.build(from: notes, tempoBpm: 120)
         #expect(score != nil)
         let noteCount = score!.measures.flatMap(\.items).filter {
             if case .note = $0 { return true }
             return false
         }.count
-        #expect(noteCount == 1)
+        #expect(noteCount == 2)
     }
 
     @Test func scoreBuilderQuantizesLockedCMajorChordToOneMeasure() {
@@ -450,13 +624,155 @@ struct OpenBardTests {
             NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble),
             NoteEvent(pitchMidi: 64, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble)
         ]
-        let size = CGSize(width: 300, height: 160)
+        let size = CGSize(width: 300, height: 220)
         let frames = PianoRollLayout.frames(notes: notes, in: size)
+        let metrics = PianoRollLayout.metrics(notes: notes, in: size)
         for frame in frames {
             #expect(frame.minX >= PianoRollLayout.labelGutter - 0.1)
             #expect(frame.maxX <= size.width - PianoRollLayout.trailingInset + 0.1)
-            #expect(frame.minY >= PianoRollLayout.verticalInset - 0.1)
-            #expect(frame.maxY <= size.height - PianoRollLayout.verticalInset + 0.1)
+            #expect(frame.minY >= metrics.contentMinY - 0.1)
+            #expect(frame.maxY <= metrics.velocityMinY + 0.1)
         }
+    }
+
+    @Test func pianoRollUsesAbletonStyleChromeInsets() {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 1, velocity: 0.8, confidence: 1, staffHint: .treble)
+        ]
+        let metrics = PianoRollLayout.metrics(notes: notes, in: CGSize(width: 300, height: 240))
+        #expect(metrics.rulerHeight == PianoRollLayout.rulerHeight)
+        #expect(metrics.velocityHeight == PianoRollLayout.velocityHeight)
+        #expect(metrics.contentMinY >= PianoRollLayout.rulerHeight)
+        #expect(PianoRollLayout.isBlackKey(midi: 61))
+        #expect(!PianoRollLayout.isBlackKey(midi: 60))
+    }
+
+    @Test func pianoRollViewportPadsFixtureAndDoesNotShrink() {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 1, velocity: 0.8, confidence: 1, staffHint: .treble),
+            NoteEvent(pitchMidi: 67, onsetSeconds: 1, durationSeconds: 1, velocity: 0.8, confidence: 1, staffHint: .treble)
+        ]
+        let seeded = PianoRollViewport.seeded(from: notes, tempoBpm: 120)
+        #expect(seeded.minPitch == 60 - PianoRollViewport.pitchPadding)
+        #expect(seeded.maxPitch == 67 + PianoRollViewport.pitchPadding)
+        #expect(seeded.timelineSeconds >= 2 + PianoRollViewport.minTimelinePaddingBeats * 0.5)
+
+        let dragged = NoteEvent(
+            pitchMidi: 55,
+            onsetSeconds: 0.5,
+            durationSeconds: 1,
+            velocity: 0.8,
+            confidence: 1,
+            staffHint: .bass
+        )
+        let expanded = seeded.expanding(toFit: dragged)
+        #expect(expanded.minPitch <= 55)
+        #expect(expanded.maxPitch == seeded.maxPitch)
+        #expect(expanded.timelineSeconds == seeded.timelineSeconds)
+
+        let later = NoteEvent(
+            pitchMidi: 60,
+            onsetSeconds: expanded.timelineSeconds + 1,
+            durationSeconds: 1,
+            velocity: 0.8,
+            confidence: 1,
+            staffHint: .treble
+        )
+        let grown = expanded.expanding(toFit: later)
+        #expect(grown.timelineSeconds > expanded.timelineSeconds)
+        #expect(grown.minPitch == expanded.minPitch)
+    }
+
+    @Test func pianoRollBlankViewportDrawsEmptyMetrics() {
+        let viewport = PianoRollViewport.blank
+        let size = CGSize(width: 300, height: 240)
+        let metrics = PianoRollLayout.metrics(viewport: viewport, in: size)
+        #expect(metrics.rowHeight > 0)
+        #expect(PianoRollLayout.frames(notes: [], viewport: viewport, in: size).isEmpty)
+        #expect(viewport.minPitch == 48)
+        #expect(viewport.maxPitch == 72)
+        #expect(viewport.timelineSeconds == NoteHelpers.barsToSeconds(16, tempoBpm: 120))
+    }
+
+    @Test func pianoRollTimeWindowZoomsAndPansWithoutShrinkingContent() {
+        var window = PianoRollTimeWindow.blank(tempoBpm: 120)
+        let content = window.contentSeconds
+        window.zoom(factor: 2, anchorNormalized: 0.5)
+        #expect(window.contentSeconds == content)
+        #expect(window.visibleDuration < content)
+        window.pan(deltaSeconds: 1)
+        #expect(window.visibleStart >= 0)
+        #expect(window.visibleEnd <= window.contentSeconds + 0.0001)
+        window.setHotspot(start: 0, duration: content)
+        #expect(abs(window.visibleDuration - content) < 0.0001)
+    }
+
+    @Test func pianoRollScalesUseFrozenViewportNotLiveNotes() {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 1, velocity: 0.8, confidence: 1, staffHint: .treble)
+        ]
+        let viewport = PianoRollViewport(minPitch: 48, maxPitch: 72, timelineSeconds: 8)
+        let size = CGSize(width: 300, height: 240)
+        let scales = PianoRollEdit.Scales.from(viewport: viewport, size: size)
+        let metrics = PianoRollLayout.metrics(viewport: viewport, in: size)
+
+        #expect(abs(scales.secondsPerPoint - (8.0 / Double(metrics.drawableWidth))) < 0.0001)
+        #expect(abs(scales.rowHeight - Double(metrics.rowHeight)) < 0.0001)
+
+        // Dragging a note outside the original note range must keep the same scales
+        // when the viewport is held fixed (no reflow).
+        let scalesAgain = PianoRollEdit.Scales.from(viewport: viewport, size: size)
+        #expect(scalesAgain == scales)
+        #expect(notes.count == 1)
+    }
+
+    @Test func pianoRollMapsPointToPitchAndCreatesDrawnNote() {
+        let viewport = PianoRollViewport(minPitch: 48, maxPitch: 72, timelineSeconds: 4)
+        let size = CGSize(width: 300, height: 240)
+        let metrics = PianoRollLayout.metrics(viewport: viewport, in: size)
+
+        let midPitch = (viewport.minPitch + viewport.maxPitch) / 2
+        let row = viewport.maxPitch - midPitch
+        let point = CGPoint(
+            x: metrics.labelGutter + metrics.drawableWidth * 0.25,
+            y: metrics.contentMinY + CGFloat(row) * metrics.rowHeight + metrics.rowHeight / 2
+        )
+
+        let mapped = PianoRollEdit.pitchAndOnset(at: point, viewport: viewport, size: size)
+        #expect(mapped != nil)
+        #expect(mapped!.pitch == midPitch)
+        #expect(abs(mapped!.onset - 1.0) < 0.05)
+
+        let note = PianoRollEdit.makeDrawnNote(
+            pitch: mapped!.pitch,
+            onset: mapped!.onset,
+            duration: NoteHelpers.defaultDurationSeconds(tempoBpm: 120)
+        )
+        #expect(note.pitchMidi == midPitch)
+        #expect(note.durationSeconds == 0.125)
+        #expect(note.velocity == NoteHelpers.defaultDrawVelocity)
+        #expect(note.staffHint == .treble)
+        #expect(!note.isLocked)
+    }
+
+    @Test func noteAudioRendererRejectsEmptyNotes() {
+        #expect(throws: NoteAudioRenderer.RenderError.noNotes) {
+            try NoteAudioRenderer.makeWAVData(from: [])
+        }
+    }
+
+    @Test func noteAudioRendererWritesWavHeaderAndChordEnergy() throws {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 0.5, velocity: 0.8, confidence: 1, staffHint: .treble),
+            NoteEvent(pitchMidi: 64, onsetSeconds: 0, durationSeconds: 0.5, velocity: 0.8, confidence: 1, staffHint: .treble),
+            NoteEvent(pitchMidi: 67, onsetSeconds: 0, durationSeconds: 0.5, velocity: 0.8, confidence: 1, staffHint: .treble),
+        ]
+        let data = try NoteAudioRenderer.makeWAVData(from: notes)
+        let bytes = [UInt8](data)
+        #expect(String(bytes[0..<4].map { Character(UnicodeScalar($0)) }) == "RIFF")
+        #expect(String(bytes[8..<12].map { Character(UnicodeScalar($0)) }) == "WAVE")
+        #expect(data.count > 44)
+        #expect(abs(NoteAudioRenderer.frequency(midiPitch: 69) - 440) < 0.01)
+        #expect(NoteAudioRenderer.timelineEnd(notes: notes) == 0.5)
     }
 }

@@ -33,21 +33,20 @@ enum ScoreBuilder {
     static let beatsPerMeasure = 4.0
     static let gridBeats = 0.25
 
-    static func build(from notes: [NoteEvent]) -> Score? {
-        let locked = notes.filter(\.isLocked)
-        guard !locked.isEmpty else { return nil }
+    static func build(from notes: [NoteEvent], tempoBpm: Double? = nil) -> Score? {
+        guard !notes.isEmpty else { return nil }
 
-        let tempoBpm = estimateTempoBpm(locked)
-        let beatSeconds = 60.0 / tempoBpm
-        let quantized = locked.map { note in
+        let resolvedTempo = tempoBpm.map(clampTempo) ?? estimateTempoBpm(notes)
+        let beatSeconds = 60.0 / resolvedTempo
+        let quantized = notes.map { note in
             quantizedNote(note, beatSeconds: beatSeconds)
         }
 
-        let clef: StaffHint = locked.allSatisfy({ $0.pitchMidi < 60 }) ? .bass : .treble
+        let clef: StaffHint = notes.allSatisfy({ $0.pitchMidi < 60 }) ? .bass : .treble
         let measures = packMeasures(quantized)
 
         return Score(
-            tempoBpm: tempoBpm,
+            tempoBpm: resolvedTempo,
             beatsPerMeasure: beatsPerMeasure,
             clef: clef,
             measures: measures
@@ -165,7 +164,7 @@ enum ScoreBuilder {
         return candidates.min(by: { abs($0 - beats) < abs($1 - beats) }) ?? 4.0
     }
 
-    private static func clampTempo(_ bpm: Double) -> Double {
+    static func clampTempo(_ bpm: Double) -> Double {
         min(max(bpm, 40), 208)
     }
 }
