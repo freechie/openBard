@@ -9,12 +9,23 @@ struct ContentView: View {
     @State private var playbackError: String?
     @State private var selectedFixture: AudioFixture = .cMajorChord
     @State private var selectedNoteIndex: Int?
-    @State private var editMode: EditMode = .inactive
+    @State private var isDraggingNote = false
     @State private var workspace: Workspace = .pianoRoll
     @State private var isLibraryMenuExpanded = false
+    @State private var pianoRollViewport: PianoRollViewport = .blank
+    @State private var timeWindow: PianoRollTimeWindow = .blank()
+    @State private var isDrawMode = true
 
     init() {
-        _transcription = State(initialValue: try? TranscriptionLoader.loadDemo())
+        _transcription = State(initialValue: TranscriptionResult(
+            engine: "manual",
+            engineVersion: "0",
+            tempoBpm: NoteHelpers.defaultTempoBpm,
+            keyGuess: nil,
+            noteEvents: []
+        ))
+        _pianoRollViewport = State(initialValue: .blank)
+        _timeWindow = State(initialValue: .blank())
     }
     
     private var theme: AbletonTheme {
@@ -26,14 +37,6 @@ struct ContentView: View {
         case score = "Score"
 
         var id: String { rawValue }
-    }
-    
-    enum EditMode {
-        case inactive
-        case nudge
-        case delete
-        case split
-        case merge
     }
 
     var body: some View {
@@ -48,7 +51,7 @@ struct ContentView: View {
                     }
                 }
             } else {
-                Text("Failed to load demo transcription")
+                Text("Failed to create blank roll")
                     .foregroundColor(theme.danger)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -156,10 +159,20 @@ struct ContentView: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("fixture-picker")
             .onChange(of: selectedFixture) { _, newFixture in
-                editMode = .inactive
                 selectedNoteIndex = nil
                 loadFixture(newFixture)
             }
+
+            Button {
+                createBlankRoll()
+            } label: {
+                Label("New blank", systemImage: "doc")
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: 44)
+            }
+            .buttonStyle(.bordered)
+            .tint(theme.accentDim)
+            .accessibilityIdentifier("new-blank")
 
             Button {
                 audioPlayer.stop()
@@ -193,7 +206,8 @@ struct ContentView: View {
         .pickerStyle(.segmented)
         .accessibilityIdentifier("workspace-picker")
         .onChange(of: workspace) { _, _ in
-            editMode = .inactive
+            selectedNoteIndex = nil
+            isDraggingNote = false
         }
     }
 
@@ -209,8 +223,24 @@ struct ContentView: View {
 
     private func pianoWorkspace(_ transcription: TranscriptionResult) -> some View {
         VStack(spacing: 8) {
+            transportBar(transcription)
+
+            PianoRollOverview(
+                notes: transcription.noteEvents,
+                timeWindow: $timeWindow,
+                tempoBpm: transcription.tempoBpm ?? NoteHelpers.defaultTempoBpm,
+                theme: theme
+            )
+
             pianoViewport(transcription)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Text("Draw notes · drag edges to resize · pinch or overview to zoom")
+                .font(.caption)
+                .foregroundColor(theme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("piano-roll-caption")
+
             toolStrip(transcription, mode: .pianoRoll)
         }
     }
@@ -220,7 +250,7 @@ struct ContentView: View {
             scoreSection(transcription)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             toolStrip(transcription, mode: .score)
-            Text("Lock notes here to build the staff. Edit pitches and timing in Piano roll.")
+            Text("Score builds from all notes on the roll. Edit timing in Piano roll.")
                 .font(.caption)
                 .foregroundColor(theme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -228,18 +258,91 @@ struct ContentView: View {
         }
     }
 
-    private func pianoViewport(_ transcription: TranscriptionResult) -> some View {
-        ZoomableViewport(allowsPan: editMode != .nudge, theme: theme) {
-            PianoRollView(
-                notes: transcription.noteEvents,
-                selectedNoteIndex: $selectedNoteIndex,
-                editMode: editMode,
-                theme: theme,
-                onNudge: { index, translation in
-                    nudgeNote(at: index, by: translation)
+    /// Ableton-inspired transport: BPM + play/stop + draw.
+    private func transportBar(_ transcription: TranscriptionResult) -> some View {
+        let bpm = transcription.tempoBpm ?? NoteHelpers.defaultTempoBpm
+        return HStack(spacing: 12) {
+            HStack(spacing: 6) {
+                Text(String(format: "%.0f", bpm))
+                    .font(.system(.title3, design: .monospaced))
+                    .bold()
+                    .foregroundColor(theme.textPrimary)
+                    .accessibilityIdentifier("tempo-bpm")
+                Text("BPM")
+                    .font(.caption)
+                    .foregroundColor(theme.textSecondary)
+
+                Button {
+                    adjustTempo(by: -1)
+                } label: {
+                    Image(systemName: "minus")
+                        .frame(minWidth: 32, minHeight: 32)
                 }
-            )
+                .buttonStyle(.bordered)
+                .tint(theme.accentDim)
+                .accessibilityIdentifier("tempo-down")
+
+                Button {
+                    adjustTempo(by: 1)
+                } label: {
+                    Image(systemName: "plus")
+                        .frame(minWidth: 32, minHeight: 32)
+                }
+                .buttonStyle(.bordered)
+                .tint(theme.accentDim)
+                .accessibilityIdentifier("tempo-up")
+            }
+
+            Spacer(minLength: 8)
+
+            iconButton(
+                systemName: audioPlayer.isPlaying ? "stop.fill" : "play.fill",
+                tint: theme.accent,
+                foreground: theme.accent,
+                label: audioPlayer.isPlaying ? "Stop" : "Play",
+                id: "play-demo-audio",
+                disabled: !audioPlayer.isPlaying && transcription.noteEvents.isEmpty
+            ) {
+                togglePlayback(transcription)
+            }
+
+            iconButton(
+                systemName: "pencil",
+                tint: isDrawMode ? theme.accent : theme.accentDim,
+                foreground: isDrawMode ? theme.accent : theme.accent.opacity(0.85),
+                label: isDrawMode ? "Draw on" : "Draw",
+                id: "draw-button"
+            ) {
+                isDrawMode.toggle()
+            }
         }
+        .padding(.horizontal, 4)
+        .accessibilityIdentifier("transport-bar")
+    }
+
+    private func pianoViewport(_ transcription: TranscriptionResult) -> some View {
+        PianoRollView(
+            notes: transcription.noteEvents,
+            viewport: pianoRollViewport,
+            timeWindow: $timeWindow,
+            tempoBpm: transcription.tempoBpm,
+            isDrawMode: isDrawMode,
+            selectedNoteIndex: $selectedNoteIndex,
+            isDraggingNote: $isDraggingNote,
+            theme: theme,
+            onEditNote: { index, note in
+                applyEditedNote(note, at: index)
+            },
+            onCreateNote: { note in
+                createNote(note)
+            }
+        )
+        .background(theme.pianoRollBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(theme.border, lineWidth: 1)
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("piano-roll-viewport")
     }
@@ -266,54 +369,20 @@ struct ContentView: View {
     }
 
     private func toolStrip(_ transcription: TranscriptionResult, mode: Workspace) -> some View {
-        let selectedLocked = selectedNoteIndex.map { transcription.noteEvents[$0].isLocked } ?? false
-        let allLocked = !transcription.noteEvents.isEmpty && transcription.noteEvents.allSatisfy(\.isLocked)
-
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                iconButton(
-                    systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill",
-                    tint: theme.accent,
-                    foreground: theme.accent,
-                    label: audioPlayer.isPlaying ? "Pause" : "Play",
-                    id: "play-demo-audio"
-                ) {
-                    togglePlayback()
-                }
-
                 if mode == .pianoRoll {
-                    iconButton(
-                        systemName: editMode == .nudge ? "hand.draw.fill" : "hand.draw",
-                        tint: editMode == .nudge ? theme.accent : theme.border,
-                        foreground: editMode == .nudge ? theme.accent : theme.textSecondary,
-                        label: "Nudge",
-                        id: "nudge-button"
-                    ) {
-                        editMode = editMode == .nudge ? .inactive : .nudge
-                    }
-
                     iconButton(
                         systemName: "trash",
                         tint: theme.danger,
                         foreground: theme.danger,
                         label: "Delete",
                         id: "delete-button",
-                        disabled: selectedNoteIndex == nil || selectedLocked
+                        disabled: selectedNoteIndex == nil
                     ) {
                         if let index = selectedNoteIndex {
                             deleteNote(at: index)
                         }
-                    }
-
-                    iconButton(
-                        systemName: selectedLocked ? "lock.open.fill" : "lock.fill",
-                        tint: theme.success,
-                        foreground: theme.success,
-                        label: selectedLocked ? "Unlock" : "Lock",
-                        id: "lock-button",
-                        disabled: selectedNoteIndex == nil
-                    ) {
-                        toggleSelectedNoteLock()
                     }
 
                     iconButton(
@@ -322,7 +391,7 @@ struct ContentView: View {
                         foreground: theme.accent.opacity(0.85),
                         label: "Split",
                         id: "split-button",
-                        disabled: selectedNoteIndex == nil || selectedLocked
+                        disabled: selectedNoteIndex == nil
                     ) {
                         if let index = selectedNoteIndex {
                             splitNote(at: index)
@@ -335,27 +404,47 @@ struct ContentView: View {
                         foreground: theme.accent.opacity(0.85),
                         label: "Merge",
                         id: "merge-button",
-                        disabled: selectedNoteIndex == nil || selectedLocked
+                        disabled: selectedNoteIndex == nil
                     ) {
                         if let index = selectedNoteIndex {
                             mergeNote(at: index)
                         }
                     }
                 } else {
-                    iconButton(
-                        systemName: allLocked ? "lock.open.fill" : "lock.fill",
-                        tint: theme.success,
-                        foreground: theme.success,
-                        label: allLocked ? "Unlock all" : "Lock all",
-                        id: "lock-all-button",
-                        disabled: transcription.noteEvents.isEmpty,
-                        prominent: true
+                    if let midiData = try? MIDIExporter.makeData(
+                        from: transcription.noteEvents,
+                        tempoBpm: transcription.tempoBpm
                     ) {
-                        if allLocked {
-                            unlockAllNotes()
-                        } else {
-                            lockAllNotes()
+                        ShareLink(
+                            item: MIDIFileDocument(data: midiData),
+                            preview: SharePreview("openBard.mid")
+                        ) {
+                            Label("Export MIDI", systemImage: "square.and.arrow.up")
+                                .labelStyle(.titleAndIcon)
+                                .frame(minHeight: 44)
+                                .padding(.horizontal, 6)
                         }
+                        .buttonStyle(.bordered)
+                        .tint(theme.accent)
+                        .accessibilityIdentifier("export-midi")
+                    }
+
+                    if let musicXMLData = try? MusicXMLExporter.makeData(
+                        from: transcription.noteEvents,
+                        tempoBpm: transcription.tempoBpm
+                    ) {
+                        ShareLink(
+                            item: MusicXMLFileDocument(data: musicXMLData),
+                            preview: SharePreview("openBard.musicxml")
+                        ) {
+                            Label("Export MusicXML", systemImage: "doc.richtext")
+                                .labelStyle(.titleAndIcon)
+                                .frame(minHeight: 44)
+                                .padding(.horizontal, 6)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(theme.accentDim)
+                        .accessibilityIdentifier("export-musicxml")
                     }
                 }
             }
@@ -372,34 +461,35 @@ struct ContentView: View {
         label: String,
         id: String,
         disabled: Bool = false,
-        prominent: Bool = false,
+        showsTitle: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
-        let labelView = Image(systemName: systemName)
-            .frame(minWidth: 44, minHeight: 44)
-            .foregroundColor(foreground)
-
-        if prominent {
-            Button(action: action) { labelView }
-                .buttonStyle(.borderedProminent)
-                .tint(tint)
-                .disabled(disabled)
-                .accessibilityLabel(label)
-                .accessibilityIdentifier(id)
-        } else {
-            Button(action: action) { labelView }
-                .buttonStyle(.bordered)
-                .tint(tint)
-                .disabled(disabled)
-                .accessibilityLabel(label)
-                .accessibilityIdentifier(id)
+        Button(action: action) {
+            if showsTitle {
+                Label(label, systemImage: systemName)
+                    .labelStyle(.titleAndIcon)
+                    .frame(minHeight: 44)
+                    .padding(.horizontal, 6)
+            } else {
+                Image(systemName: systemName)
+                    .frame(minWidth: 44, minHeight: 44)
+            }
         }
+        .buttonStyle(.bordered)
+        .tint(tint)
+        .foregroundColor(foreground)
+        .disabled(disabled)
+        .accessibilityLabel(label)
+        .accessibilityIdentifier(id)
     }
 
     @ViewBuilder
     private func scoreSection(_ transcription: TranscriptionResult) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            if let score = ScoreBuilder.build(from: transcription.noteEvents) {
+            if let score = ScoreBuilder.build(
+                from: transcription.noteEvents,
+                tempoBpm: transcription.tempoBpm
+            ) {
                 Text(StaffLayout.summary(for: score))
                     .font(.caption)
                     .foregroundColor(theme.textSecondary)
@@ -413,7 +503,7 @@ struct ContentView: View {
                 .accessibilityIdentifier("staff-viewport")
             } else {
                 ZoomableViewport(theme: theme) {
-                    Text("Lock notes to build a score")
+                    Text("Draw notes in Piano roll to build a score")
                         .font(.subheadline)
                         .foregroundColor(theme.textSecondary)
                         .multilineTextAlignment(.center)
@@ -431,28 +521,76 @@ struct ContentView: View {
 
     private func loadFixture(_ fixture: AudioFixture) {
         playbackError = nil
-        
+        selectedNoteIndex = nil
+        isDrawMode = false
+        audioPlayer.stop()
+
         do {
-            let url = try TranscriptionLoader.fixtureAudioURL(fixture)
-            try audioPlayer.play(url: url, name: "\(fixture.rawValue).wav")
-            
+            let loaded: TranscriptionResult
             if let fixtureTranscription = try TranscriptionLoader.loadFixture(fixture) {
-                transcription = fixtureTranscription
+                loaded = fixtureTranscription
             } else {
-                transcription = try TranscriptionLoader.loadDemo()
+                loaded = try TranscriptionLoader.loadDemo()
             }
+            transcription = loaded
+            let seeded = PianoRollViewport.seeded(
+                from: loaded.noteEvents,
+                tempoBpm: loaded.tempoBpm
+            )
+            pianoRollViewport = seeded
+            timeWindow = .from(contentSeconds: seeded.timelineSeconds, tempoBpm: loaded.tempoBpm)
+            audioPlayer.clearSource(name: "\(fixture.rawValue) notes")
         } catch {
             playbackError = "Could not load fixture: \(fixture.rawValue)"
         }
     }
 
-    private func togglePlayback() {
+    private func createBlankRoll() {
+        playbackError = nil
+        selectedNoteIndex = nil
+        isDrawMode = true
+        audioPlayer.clearSource(name: "Blank")
+        transcription = TranscriptionResult(
+            engine: "manual",
+            engineVersion: "0",
+            tempoBpm: NoteHelpers.defaultTempoBpm,
+            keyGuess: nil,
+            noteEvents: []
+        )
+        pianoRollViewport = .blank
+        timeWindow = .blank()
+        workspace = .pianoRoll
+    }
+
+    private func adjustTempo(by delta: Double) {
+        guard var trans = transcription else { return }
+        let current = trans.tempoBpm ?? NoteHelpers.defaultTempoBpm
+        trans.tempoBpm = ScoreBuilder.clampTempo(current + delta)
+        transcription = trans
+    }
+
+    private func syncTimeline(for note: NoteEvent) {
+        pianoRollViewport = pianoRollViewport.expanding(toFit: note)
+        var window = timeWindow
+        window.syncContentSeconds(pianoRollViewport.timelineSeconds)
+        timeWindow = window
+    }
+
+    private func togglePlayback(_ transcription: TranscriptionResult) {
         playbackError = nil
         if audioPlayer.isPlaying {
             audioPlayer.stop()
             return
         }
-        loadFixture(selectedFixture)
+        guard !transcription.noteEvents.isEmpty else {
+            playbackError = "Draw notes to play"
+            return
+        }
+        do {
+            try audioPlayer.playNotes(transcription.noteEvents, name: "Notes")
+        } catch {
+            playbackError = "Could not play notes"
+        }
     }
 
     private func importAudio(_ result: Result<[URL], Error>) {
@@ -478,13 +616,6 @@ struct ContentView: View {
             playbackError = "Could not play imported audio"
         }
     }
-    
-    private func toggleSelectedNoteLock() {
-        guard let index = selectedNoteIndex else { return }
-        guard var trans = transcription, trans.noteEvents.indices.contains(index) else { return }
-        trans.noteEvents[index].isLocked.toggle()
-        transcription = trans
-    }
 
     private func deleteNote(at index: Int) {
         guard var trans = transcription else { return }
@@ -493,70 +624,30 @@ struct ContentView: View {
         transcription = trans
         selectedNoteIndex = nil
     }
-    
-    private func lockNote(at index: Int) {
+
+    private func applyEditedNote(_ note: NoteEvent, at index: Int) {
         guard var trans = transcription else { return }
-        guard index < trans.noteEvents.count else { return }
-        trans.noteEvents[index].isLocked = true
+        guard trans.noteEvents.indices.contains(index) else { return }
+        trans.noteEvents[index] = note
         transcription = trans
+        syncTimeline(for: note)
     }
 
-    private func unlockNote(at index: Int) {
+    private func createNote(_ note: NoteEvent) {
         guard var trans = transcription else { return }
-        guard index < trans.noteEvents.count else { return }
-        trans.noteEvents[index].isLocked = false
+        trans.noteEvents.append(note)
         transcription = trans
+        selectedNoteIndex = trans.noteEvents.count - 1
+        syncTimeline(for: note)
     }
 
-    private func lockAllNotes() {
-        guard var trans = transcription else { return }
-        for index in trans.noteEvents.indices {
-            trans.noteEvents[index].isLocked = true
-        }
-        transcription = trans
-        selectedNoteIndex = nil
-        editMode = .inactive
-    }
-
-    private func unlockAllNotes() {
-        guard var trans = transcription else { return }
-        for index in trans.noteEvents.indices {
-            trans.noteEvents[index].isLocked = false
-        }
-        transcription = trans
-        selectedNoteIndex = nil
-        editMode = .inactive
-    }
-    
-    private func nudgeNote(at index: Int, by translation: CGSize) {
-        guard var trans = transcription else { return }
-        guard index < trans.noteEvents.count else { return }
-        guard !trans.noteEvents[index].isLocked else { return }
-        
-        let timeScale: Double = 0.01
-        let pitchScale: Double = 1.0 / 20.0
-        
-        let timeOffset = Double(translation.width) * timeScale
-        let pitchOffset = Int(-translation.height * pitchScale)
-        
-        trans.noteEvents[index].onsetSeconds = max(0, trans.noteEvents[index].onsetSeconds + timeOffset)
-        
-        let newPitch = trans.noteEvents[index].pitchMidi + pitchOffset
-        if newPitch >= 0 && newPitch <= 127 {
-            trans.noteEvents[index].pitchMidi = newPitch
-        }
-        
-        transcription = trans
-    }
-    
     private func splitNote(at index: Int) {
         guard var trans = transcription else { return }
         guard index < trans.noteEvents.count else { return }
-        guard !trans.noteEvents[index].isLocked else { return }
-        
+
         let note = trans.noteEvents[index]
         guard note.durationSeconds > 0.1 else { return }
-        
+
         let splitPoint = note.durationSeconds / 2.0
         let firstNote = NoteEvent(
             pitchMidi: note.pitchMidi,
@@ -578,35 +669,33 @@ struct ContentView: View {
             staffHint: note.staffHint,
             isLocked: false
         )
-        
+
         trans.noteEvents.remove(at: index)
         trans.noteEvents.insert(firstNote, at: index)
         trans.noteEvents.insert(secondNote, at: index + 1)
         transcription = trans
         selectedNoteIndex = index + 1
     }
-    
+
     private func mergeNote(at index: Int) {
         guard var trans = transcription else { return }
         guard index < trans.noteEvents.count else { return }
         let note = trans.noteEvents[index]
-        guard !note.isLocked else { return }
-        
+
         let mergeCandidateIndex = trans.noteEvents.enumerated().first { otherIndex, otherNote in
             otherIndex != index &&
-            !otherNote.isLocked &&
             otherNote.pitchMidi == note.pitchMidi &&
             abs(otherNote.onsetSeconds - (note.onsetSeconds + note.durationSeconds)) < 0.05
         }?.offset
-        
+
         guard let mergeIndex = mergeCandidateIndex else { return }
-        
+
         let otherNote = trans.noteEvents[mergeIndex]
         let earlierIndex = note.onsetSeconds < otherNote.onsetSeconds ? index : mergeIndex
         let laterIndex = note.onsetSeconds < otherNote.onsetSeconds ? mergeIndex : index
         let earlierNote = trans.noteEvents[earlierIndex]
         let laterNote = trans.noteEvents[laterIndex]
-        
+
         let mergedNote = NoteEvent(
             pitchMidi: earlierNote.pitchMidi,
             onsetSeconds: earlierNote.onsetSeconds,
@@ -617,7 +706,7 @@ struct ContentView: View {
             staffHint: earlierNote.staffHint,
             isLocked: false
         )
-        
+
         trans.noteEvents.remove(at: max(earlierIndex, laterIndex))
         trans.noteEvents.remove(at: min(earlierIndex, laterIndex))
         trans.noteEvents.insert(mergedNote, at: min(earlierIndex, laterIndex))

@@ -3,7 +3,7 @@ import Foundation
 struct TranscriptionResult: Decodable {
     let engine: String
     let engineVersion: String
-    let tempoBpm: Double?
+    var tempoBpm: Double?
     let keyGuess: String?
     var noteEvents: [NoteEvent]
 }
@@ -15,7 +15,7 @@ struct NoteEvent: Decodable, Identifiable {
     let velocity: Double
     let confidence: Double
     let onsetUncertaintySeconds: Double?
-    let staffHint: StaffHint
+    var staffHint: StaffHint
     var isLocked: Bool = false
     
     var id: String {
