@@ -15,60 +15,85 @@ struct PianoRollView: View {
                     let note = notes[index]
                     let path = Path(roundedRect: frame, cornerRadius: 3)
                     let opacity = min(max(0.3, note.confidence * 0.85), 0.95)
-                    
+
                     var color = theme.noteFill
                     if note.isLocked {
                         color = theme.noteLocked
                     } else if selectedNoteIndex == index {
                         color = theme.noteSelected
                     }
-                    
+
                     context.fill(path, with: .color(color.opacity(opacity)))
+
+                    if note.isLocked, selectedNoteIndex == index {
+                        context.stroke(
+                            path,
+                            with: .color(theme.noteSelected),
+                            lineWidth: 2
+                        )
+                    }
                 }
-                
+
                 drawGrid(context: context, size: size)
             }
+            .id(canvasIdentity)
             .background(theme.pianoRollBackground)
             .overlay {
                 pitchLabels(in: geometry.size)
             }
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { value in
-                        if editMode == .nudge, let index = selectedNoteIndex {
-                            onNudge?(index, value.translation)
-                        }
-                    }
-                    .onEnded { value in
-                        if editMode == .nudge {
-                            return
-                        }
-                        if value.translation.width < 5 && value.translation.height < 5 {
-                            selectedNoteIndex = hitTestNote(at: value.location, in: geometry.size)
-                        }
-                    }
-            )
+            .contentShape(Rectangle())
+            .highPriorityGesture(interactionGesture(in: geometry.size))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Piano roll with \(notes.count) notes")
             .accessibilityIdentifier("piano-roll")
         }
     }
-    
+
+    private var canvasIdentity: String {
+        notes.map { note in
+            "\(note.pitchMidi)-\(note.onsetSeconds)-\(note.durationSeconds)-\(note.isLocked)"
+        }
+        .joined(separator: "|")
+        + "|sel:\(selectedNoteIndex.map(String.init) ?? "nil")"
+    }
+
+    private func interactionGesture(in size: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                guard editMode == .nudge else { return }
+                let index = selectedNoteIndex
+                    ?? PianoRollLayout.hitTest(notes: notes, at: value.startLocation, in: size)
+                guard let index else { return }
+                if selectedNoteIndex != index {
+                    selectedNoteIndex = index
+                }
+                onNudge?(index, value.translation)
+            }
+            .onEnded { value in
+                guard editMode != .nudge else { return }
+                let isTap = abs(value.translation.width) < 8 && abs(value.translation.height) < 8
+                guard isTap else { return }
+
+                if let hit = PianoRollLayout.hitTest(notes: notes, at: value.startLocation, in: size) {
+                    selectedNoteIndex = selectedNoteIndex == hit ? nil : hit
+                } else {
+                    selectedNoteIndex = nil
+                }
+            }
+    }
+
     private func drawGrid(context: GraphicsContext, size: CGSize) {
         guard !notes.isEmpty else { return }
-        
+
         let pitches = notes.map(\.pitchMidi)
         guard let minPitch = pitches.min(), let maxPitch = pitches.max() else { return }
-        
-        let pitchSpan = max(maxPitch - minPitch, 1)
-        let rowHeight = size.height / CGFloat(pitchSpan + 1)
-        let labelGutter: CGFloat = 36
-        
-        for i in 0...pitchSpan {
-            let y = CGFloat(i) * rowHeight
+
+        let metrics = PianoRollLayout.metrics(notes: notes, in: size)
+        for i in 0...max(maxPitch - minPitch, 1) {
+            let y = metrics.contentMinY + CGFloat(i) * metrics.rowHeight
             let path = Path { p in
-                p.move(to: CGPoint(x: labelGutter, y: y))
-                p.addLine(to: CGPoint(x: size.width, y: y))
+                p.move(to: CGPoint(x: metrics.labelGutter, y: y))
+                p.addLine(to: CGPoint(x: size.width - metrics.trailingInset, y: y))
             }
             context.stroke(path, with: .color(theme.gridLine), lineWidth: 0.5)
         }
@@ -76,42 +101,40 @@ struct PianoRollView: View {
 
     @ViewBuilder
     private func pitchLabels(in size: CGSize) -> some View {
-        if let minPitch = notes.map(\.pitchMidi).min(),
+        if notes.map(\.pitchMidi).min() != nil,
            let maxPitch = notes.map(\.pitchMidi).max() {
-            let pitchSpan = max(maxPitch - minPitch, 1)
-            let rowHeight = size.height / CGFloat(pitchSpan + 1)
-            
+            let metrics = PianoRollLayout.metrics(notes: notes, in: size)
             let uniquePitches = Set(notes.map(\.pitchMidi)).sorted()
-            
+
             ZStack {
                 ForEach(uniquePitches, id: \.self) { pitch in
-                    let y = CGFloat(maxPitch - pitch) * rowHeight + rowHeight / 2
+                    let y = metrics.contentMinY
+                        + CGFloat(maxPitch - pitch) * metrics.rowHeight
+                        + metrics.rowHeight / 2
                     Text(PianoRollLayout.pitchName(midi: pitch))
                         .font(.caption2)
                         .foregroundColor(theme.textSecondary)
-                        .position(
-                            x: 16,
-                            y: y
-                        )
+                        .position(x: metrics.labelGutter / 2, y: y)
                 }
             }
             .allowsHitTesting(false)
         }
     }
-    
-    private func hitTestNote(at location: CGPoint, in size: CGSize) -> Int? {
-        let frames = PianoRollLayout.frames(notes: notes, in: size)
-        for (index, frame) in frames.enumerated() {
-            if frame.contains(location) {
-                return index
-            }
-        }
-        return nil
-    }
 }
 
 enum PianoRollLayout {
     static let minimumRowHeight: CGFloat = 14
+    static let labelGutter: CGFloat = 40
+    static let trailingInset: CGFloat = 8
+    static let verticalInset: CGFloat = 10
+
+    struct Metrics {
+        var labelGutter: CGFloat
+        var trailingInset: CGFloat
+        var contentMinY: CGFloat
+        var rowHeight: CGFloat
+        var drawableWidth: CGFloat
+    }
 
     static func pitchName(midi: Int) -> String {
         let names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
@@ -126,31 +149,59 @@ enum PianoRollLayout {
             return floor
         }
         let rows = CGFloat(max(maxPitch - minPitch, 1) + 1)
-        return max(floor, rows * minimumRowHeight)
+        return max(floor, rows * minimumRowHeight + verticalInset * 2)
+    }
+
+    static func metrics(notes: [NoteEvent], in size: CGSize) -> Metrics {
+        let pitches = notes.map(\.pitchMidi)
+        let minPitch = pitches.min() ?? 60
+        let maxPitch = pitches.max() ?? 60
+        let pitchSpan = max(maxPitch - minPitch, 1)
+        let rows = CGFloat(pitchSpan + 1)
+        let availableHeight = max(size.height - verticalInset * 2, rows)
+        return Metrics(
+            labelGutter: labelGutter,
+            trailingInset: trailingInset,
+            contentMinY: verticalInset,
+            rowHeight: availableHeight / rows,
+            drawableWidth: max(size.width - labelGutter - trailingInset, 1)
+        )
     }
 
     static func frames(notes: [NoteEvent], in size: CGSize) -> [CGRect] {
         guard !notes.isEmpty else { return [] }
 
         let pitches = notes.map(\.pitchMidi)
-        guard let minPitch = pitches.min(), let maxPitch = pitches.max() else {
+        guard let maxPitch = pitches.max() else {
             return []
         }
 
         let end = notes.map { $0.onsetSeconds + $0.durationSeconds }.max() ?? 1
         let duration = max(end, 0.001)
-        let pitchSpan = max(maxPitch - minPitch, 1)
-        let rowHeight = size.height / CGFloat(pitchSpan + 1)
-        let labelGutter: CGFloat = 36
-        let verticalInset = min(4, max(rowHeight * 0.15, 0))
+        let metrics = metrics(notes: notes, in: size)
+        let rowInset = min(4, max(metrics.rowHeight * 0.15, 0))
 
         return notes.map { note in
-            let x = labelGutter + CGFloat(note.onsetSeconds / duration) * (size.width - labelGutter)
-            let rawWidth = CGFloat(note.durationSeconds / duration) * (size.width - labelGutter)
-            let width = max(rawWidth, 4)
-            let y = CGFloat(maxPitch - note.pitchMidi) * rowHeight + verticalInset / 2
-            let height = max(rowHeight - verticalInset, 2)
+            let x = metrics.labelGutter
+                + CGFloat(note.onsetSeconds / duration) * metrics.drawableWidth
+            let rawWidth = CGFloat(note.durationSeconds / duration) * metrics.drawableWidth
+            let width = min(max(rawWidth, 4), metrics.drawableWidth)
+            let y = metrics.contentMinY
+                + CGFloat(maxPitch - note.pitchMidi) * metrics.rowHeight
+                + rowInset / 2
+            let height = max(metrics.rowHeight - rowInset, 2)
             return CGRect(x: x, y: y, width: width, height: height)
         }
+    }
+
+    /// Returns the note under `point`, preferring later (visually topmost) overlaps.
+    static func hitTest(notes: [NoteEvent], at point: CGPoint, in size: CGSize) -> Int? {
+        let frames = frames(notes: notes, in: size)
+        for (index, frame) in frames.enumerated().reversed() {
+            if frame.contains(point) {
+                return index
+            }
+        }
+        return nil
     }
 }
