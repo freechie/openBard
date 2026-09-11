@@ -7,9 +7,8 @@ Product direction and how to run the project live in [README.md](README.md).
 
 ## Next
 
-1. **MIDI export** from locked notes / ScoreBuilder output; open in an external DAW.
-2. **MusicXML export**; open in MuseScore (or similar); document limits.
-3. Then Phase 4: guided recording + on-device Basic Pitch (app still uses bundled JSON only).
+1. Phase 4: guided recording + on-device Basic Pitch (app still uses bundled JSON only).
+2. Edit polish: multi-select, undo/redo, editable velocity pins, richer overview; open exported MusicXML in MuseScore and document limits.
 
 ## Shipped
 
@@ -31,24 +30,27 @@ Product direction and how to run the project live in [README.md](README.md).
 - Demo GET still fake `dsp_v0`; amplitude mapped to velocity + confidence (no invented 1.0)
 - Contract: optional tempo/key, `onset_uncertainty_seconds`, `basic_pitch` engine enum
 - iOS: fixture picker (incl. precomputed `isolated-piano-basicpitch.json`), confidence opacity on piano roll
-- Edit: tap-select, nudge, delete, lock / lock-all, split, merge; locked notes resist edits
-- Pinch-zoom piano + staff viewports; Ableton-inspired theme
+- Edit: Ableton-style transport (BPM default 120, Play/Stop, Draw); clip overview hotspot for zoom/pan; stable pitch viewport; L/R edge resize + drag move; Library New blank / fixtures optional
+- Score builds from **all notes** (no lock gate); MIDI/MusicXML export from note list; Play synthesizes current notes
+- Pinch-zoom time window on piano roll; staff still uses ZoomableViewport
 - Worker + iOS unit tests; fixture-backed Basic Pitch recall check in `./scripts/verify`
 
 ### Phase 3 — Score (partial)
 - `ScoreBuilder` from **locked** notes only (tempo/beat estimate, quantize, rests/ties/clef)
 - Staff preview after Lock all
-- **Not shipped:** MIDI file export, MusicXML export
+- **MIDI export** (Format 0 SMF) from locked notes via Score workspace ShareLink
+- **MusicXML export** (partwise 3.1) from ScoreBuilder via Score workspace ShareLink
+  - Limits: C major key only, no dotted rhythm encoding, rests typed but simple; validate in MuseScore
 
 ## Not shipped
 
 | Area | Gap |
 | --- | --- |
-| Export | MIDI / MusicXML files; external-app validation |
+| Export | External-app validation notes for MusicXML (MuseScore); richer rhythm/key encoding |
 | iOS ↔ engine | App does **not** call the worker; no on-device Basic Pitch yet |
 | Import | User files are playback-only; piano roll stays on bundled JSON |
 | Recording | No live capture, meters, or guided UX |
-| Edit polish | Undo/redo, multi-select, live nudge preview, persist edited JSON |
+| Edit polish | Undo/redo, multi-select, velocity-lane pin editing, persist edited JSON |
 | Research | MuScriptor multi-instrument; per-instrument models; larger fixture set |
 
 ## Honest limitations

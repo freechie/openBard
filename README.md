@@ -4,8 +4,9 @@ openBard is an experimental iOS app. It turns recorded or imported music into
 editable notes, then later into sheet music.
 
 **Shipped today:** JSON contract, FastAPI worker with live Basic Pitch on
-upload, iOS piano-roll edit loop, ScoreBuilder staff preview from locked notes.
-**Not shipped:** MIDI/MusicXML export, on-device inference, guided recording.
+upload, iOS piano-roll edit loop, ScoreBuilder staff preview, MIDI and
+MusicXML export from locked notes.
+**Not shipped:** on-device inference, guided recording.
 The iOS app still loads bundled JSON; it does not call the worker.
 
 Status, shipped checklist, and next work: **[STATUS.md](STATUS.md)**.
@@ -44,8 +45,9 @@ tested separately.
    scores, onset uncertainty, and possible octave or harmonic flags before any
    ScoreBuilder pass. Users see what the model detected.
 
-4. **Edit, then lock, then score.** Split, merge, or nudge notes on the piano
-   roll. Lock the ones you confirm. ScoreBuilder then builds the staff.
+4. **Edit, then lock, then score.** Start on a blank roll, Draw notes, Play to
+   hear a synth preview, then lock and build the staff. Fixtures remain optional
+   in Library.
 
 5. **Fixture checks in CI.** Each model change must report recall and
    spurious-note rates on known chords and scales. An accuracy drop needs an
@@ -61,7 +63,7 @@ tested separately.
   model (Basic Pitch).
 - Show raw transcription on an unquantized piano roll, including confidence,
   onset uncertainty, and harmonic or octave flags.
-- Split, merge, or nudge notes. Lock confirmed events.
+- Split, merge, or drag notes. Lock confirmed events.
 - Convert locked note events into a staff preview with ScoreBuilder.
 - Export MIDI and MusicXML for other notation software.
 - CI checks recall and spurious-note rates on known fixtures.
@@ -96,7 +98,7 @@ flowchart LR
 
 The transcription JSON stores what was heard, in seconds, including confidence
 and onset uncertainty. The piano-roll editor shows those fields and lets users
-split, merge, or nudge notes before locking them. After lock, `ScoreBuilder`
+split, merge, or drag notes before locking them. After lock, `ScoreBuilder`
 estimates beats and measures, quantizes durations, assigns voices, and creates
 rests and ties.
 
