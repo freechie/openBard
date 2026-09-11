@@ -55,7 +55,7 @@ struct ZoomableViewport<Content: View>: View {
                     offset = ZoomMath.clampOffset(offset, viewport: newSize, scale: currentScale)
                 }
                 .simultaneousGesture(magnifyGesture)
-                .simultaneousGesture(panGesture)
+                .simultaneousGesture(currentScale > 1.02 ? panGesture : nil)
                 .simultaneousGesture(
                     TapGesture(count: 2).onEnded { reset() }
                 )

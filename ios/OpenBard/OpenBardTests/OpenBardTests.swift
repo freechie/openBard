@@ -270,6 +270,47 @@ struct OpenBardTests {
         #expect(frames.allSatisfy { $0.minY >= 0 && $0.maxY <= size.height + 0.5 })
     }
 
+    @Test func pianoRollHitTestSelectsPitchRowNotTopNoteEverywhere() {
+        let notes = [
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble),
+            NoteEvent(pitchMidi: 64, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble),
+            NoteEvent(pitchMidi: 67, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble),
+        ]
+        let size = CGSize(width: 200, height: 160)
+        let frames = PianoRollLayout.frames(notes: notes, in: size)
+
+        #expect(PianoRollLayout.hitTest(notes: notes, at: CGPoint(x: frames[0].midX, y: frames[0].midY), in: size) == 0)
+        #expect(PianoRollLayout.hitTest(notes: notes, at: CGPoint(x: frames[1].midX, y: frames[1].midY), in: size) == 1)
+        #expect(PianoRollLayout.hitTest(notes: notes, at: CGPoint(x: frames[2].midX, y: frames[2].midY), in: size) == 2)
+        #expect(PianoRollLayout.hitTest(notes: notes, at: CGPoint(x: 10, y: 10), in: size) == nil)
+    }
+
+    @Test func togglingNoteLockUpdatesTranscription() {
+        var transcription = TranscriptionResult(
+            engine: "test",
+            engineVersion: "0",
+            tempoBpm: 120,
+            keyGuess: "C",
+            noteEvents: [
+                NoteEvent(
+                    pitchMidi: 60,
+                    onsetSeconds: 0,
+                    durationSeconds: 1,
+                    velocity: 0.8,
+                    confidence: 1,
+                    staffHint: .treble,
+                    isLocked: false
+                )
+            ]
+        )
+
+        transcription.noteEvents[0].isLocked.toggle()
+        #expect(transcription.noteEvents[0].isLocked)
+
+        transcription.noteEvents[0].isLocked.toggle()
+        #expect(!transcription.noteEvents[0].isLocked)
+    }
+
     @Test func scoreBuilderReturnsNilWithoutLockedNotes() {
         let notes = [
             NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble)
@@ -384,5 +425,38 @@ struct OpenBardTests {
         let large = StaffLayout.lineSpacing(in: CGSize(width: 320, height: 240))
         #expect(large > small)
         #expect(small >= 8)
+    }
+
+    @Test func staffFitKeepsNoteHeadsInsideViewport() {
+        let notes = [
+            NoteEvent(pitchMidi: 72, onsetSeconds: 0, durationSeconds: 1, velocity: 0.8, confidence: 1, staffHint: .treble, isLocked: true),
+            NoteEvent(pitchMidi: 48, onsetSeconds: 0, durationSeconds: 1, velocity: 0.8, confidence: 1, staffHint: .bass, isLocked: true)
+        ]
+        let score = ScoreBuilder.build(from: notes)!
+        let size = CGSize(width: 320, height: 160)
+        let fit = StaffLayout.fit(score: score, in: size)
+        let head: CGFloat = max(6, fit.lineSpacing * 0.8)
+        let highY = fit.bottomLineY
+            - CGFloat(StaffLayout.diatonicSteps(72) - StaffLayout.diatonicSteps(64)) * (fit.lineSpacing / 2)
+        let lowY = fit.bottomLineY
+            - CGFloat(StaffLayout.diatonicSteps(48) - StaffLayout.diatonicSteps(64)) * (fit.lineSpacing / 2)
+        #expect(highY - head / 2 >= fit.padding - 0.5)
+        #expect(lowY + head / 2 <= size.height - fit.padding + 0.5)
+    }
+
+    @Test func pianoRollFramesStayInsideViewport() {
+        let notes = [
+            NoteEvent(pitchMidi: 67, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble),
+            NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble),
+            NoteEvent(pitchMidi: 64, onsetSeconds: 0, durationSeconds: 2, velocity: 0.8, confidence: 1, staffHint: .treble)
+        ]
+        let size = CGSize(width: 300, height: 160)
+        let frames = PianoRollLayout.frames(notes: notes, in: size)
+        for frame in frames {
+            #expect(frame.minX >= PianoRollLayout.labelGutter - 0.1)
+            #expect(frame.maxX <= size.width - PianoRollLayout.trailingInset + 0.1)
+            #expect(frame.minY >= PianoRollLayout.verticalInset - 0.1)
+            #expect(frame.maxY <= size.height - PianoRollLayout.verticalInset + 0.1)
+        }
     }
 }

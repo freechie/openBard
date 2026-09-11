@@ -3,10 +3,12 @@
 openBard is an experimental iOS app. It turns recorded or imported music into
 editable notes, then later into sheet music.
 
-Early prototype. These pieces work: the JSON contract, the bundled C major
-chord WAV, the demo FastAPI worker, iOS playback and import, and the piano-roll
-preview. Live audio transcription and file export are not implemented. When a
-file is uploaded, the worker still returns the hardcoded C major chord.
+**Shipped today:** JSON contract, FastAPI worker with live Basic Pitch on
+upload, iOS piano-roll edit loop, ScoreBuilder staff preview from locked notes.
+**Not shipped:** MIDI/MusicXML export, on-device inference, guided recording.
+The iOS app still loads bundled JSON; it does not call the worker.
+
+Status, shipped checklist, and next work: **[STATUS.md](STATUS.md)**.
 
 ## Product direction
 
@@ -35,8 +37,8 @@ tested separately.
    gets clean input.
 
 2. **Small on-device models per instrument.** Piano, guitar, and strings get
-   their own networks instead of one generic network. Basic Pitch is the
-   Phase 1 MVP candidate. An adapter lets you swap or blend models.
+   their own networks instead of one generic network. Basic Pitch is the MVP
+   candidate. An adapter lets you swap or blend models.
 
 3. **Show model output before quantization.** The piano roll shows confidence
    scores, onset uncertainty, and possible octave or harmonic flags before any
@@ -56,7 +58,7 @@ tested separately.
 - Import or record a short solo or isolated instrument performance with guided
   recording (gain, noise, and clipping meters).
 - Detect simultaneous notes, onsets, and durations with a small on-device
-  model (Basic Pitch as the Phase 1 candidate).
+  model (Basic Pitch).
 - Show raw transcription on an unquantized piano roll, including confidence,
   onset uncertainty, and harmonic or octave flags.
 - Split, merge, or nudge notes. Lock confirmed events.
@@ -105,97 +107,12 @@ interface. Per-instrument models can load one at a time. Do not add a plugin
 framework, model microservice, background job system, or source-separation
 stage until measurements show you need them.
 
-## Roadmap
-
-### Phase 0. Prototype baseline (complete)
-
-- [x] Define and validate a transcription JSON schema.
-- [x] Add FastAPI health and hardcoded demo-transcription endpoints.
-- [x] Test the worker, fake engine, and schema contract.
-- [x] Create the SwiftUI app and decode a bundled demo transcription.
-
-### Phase 1. Feasibility and engine decision (complete)
-
-- [x] Create two legally usable 10 to 20 second fixtures: isolated polyphonic
-  instrument and small mixed arrangement with known notes.
-- [x] Evaluate Basic Pitch on the isolated fixture.
-- [x] Evaluate MuScriptor availability and licensing constraints for research
-  track.
-- [x] Select Basic Pitch for publishable MVP; document decision in
-  `docs/phase1-engine-decision.md`.
-
-**Outcome.** Basic Pitch meets the isolated and solo instrument criteria.
-100% recall, sub-second latency, Apache 2.0 license. MuScriptor stays on the
-research track for multi-instrument evaluation.
-
-### Phase 2. Piano roll and edit loop
-
-iOS edit loop and fixture JSON are in (see `TODO.md`). Worker
-`POST /v1/transcriptions` still returns the hardcoded chord.
-
-- [ ] Put Basic Pitch behind a `Transcriber` adapter.
-- [ ] Process bundled fixture instead of returning hardcoded notes.
-- [ ] Extend contract to capture confidence scores and onset uncertainty from
-  model output (do not invent data the model does not provide).
-- [ ] Render pitch, onset, duration, overlap, and confidence or uncertainty
-  flags in an interactive piano roll.
-- [ ] Implement tap-to-split, tap-to-merge, drag-to-nudge note editing.
-- [ ] Add a lock-notes action that freezes validated events for ScoreBuilder.
-- [ ] Cover success, loading, cancellation, and failure states with tests.
-- [ ] Add fixture-backed evaluation to CI: prove recall and spurious-note rates
-  on `isolated-piano.wav` and one additional test fixture.
-
-Acceptance criteria: the user loads real audio, sees confidence on the piano
-roll, edits notes, locks them, and the locked events match known ground truth
-within tolerance.
-
-### Phase 3. ScoreBuilder and export
-
-- [x] Estimate tempo and beat positions independently from locked note events
-  (not raw transcription).
-- [x] Quantize notes into measures while preserving simultaneous notes as chords.
-- [x] Generate rests, ties, clefs, and simple voice assignments.
-- [x] Render a deterministic staff preview for known rhythmic fixtures.
-- [ ] Export MIDI and validate in at least one external DAW or notation app.
-- [ ] Export MusicXML and validate correct import in MuseScore, Finale, or
-  Sibelius.
-- [ ] Document export limitations and known edge cases.
-
-Acceptance criteria: locked piano-roll events become staff notation, then MIDI
-or MusicXML that opens correctly in external software.
-
-### Phase 4. Guided recording and user-file MVP
-
-- [ ] Add live audio recording with real-time gain, noise floor, and clipping
-  meters.
-- [ ] Guide users to produce clean input (visual feedback, recording tips).
-- [ ] Add file selection with duration and size limits.
-- [ ] Keep inference on-device (Basic Pitch TFLite model bundled in app).
-- [ ] Add errors that say what to do, plus progress, cancellation, and
-  accessibility labels.
-- [ ] Document privacy behavior and require users to confirm they have rights
-  to process the selected audio.
-- [ ] Test representative solo instruments (piano, guitar, flute, vocals) and
-  record known limitations before submission.
-- [ ] App Store preparation: privacy policy, rejection-risk plan, beta
-  testing plan.
-
-### Phase 5+. Research and hardening
-
-- [ ] Evaluate MuScriptor on multi-instrument fixtures (requires HuggingFace
-  auth and written permission for App Store use).
-- [ ] Prototype per-instrument model selection or blending.
-- [ ] Expand fixture library: guitar, strings, brass, edge cases.
-- [ ] Optimize model size and inference latency for older devices.
-- [ ] User testing with musicians. Iterate on the edit loop and guided
-  recording UI.
-
 ## Model and licensing policy
 
 | Engine | Intended use | Current policy |
 | --- | --- | --- |
-| Fake engine | Contract and UI development | Included now |
-| [Basic Pitch](https://github.com/spotify/basic-pitch) | Solo or isolated polyphonic instruments | Candidate for the publishable, on-device MVP; Apache-2.0 |
+| Fake engine | Contract and UI development | Included now (`GET /v1/transcriptions/demo`) |
+| [Basic Pitch](https://github.com/spotify/basic-pitch) | Solo or isolated polyphonic instruments | MVP candidate; live on worker `POST /v1/transcriptions`; Apache-2.0 |
 | [MuScriptor](https://github.com/muscriptor/muscriptor) | Full mixes and instrument-conditioned research | Local evaluation only until public App Store use is confirmed in writing; code is MIT, weights are CC BY-NC 4.0 |
 
 openBard is a personal project with no licensing budget. Monetization is
@@ -217,11 +134,12 @@ A public App Store build requires all of the following:
 ## Repository layout
 
 ```text
+STATUS.md   Shipped / next / gaps (read this for progress)
 contracts/  Shared JSON schema and example transcription
-fixtures/   Bundled C major chord WAV
+fixtures/   Audio fixtures, ground truth, eval results
 ios/        SwiftUI application and iOS tests
 worker/     FastAPI worker, engine adapters, and Python tests
-TODO.md     Pointer to the active roadmap and immediate task
+scripts/    verify, fixture generation, engine eval
 ```
 
 ## Development
@@ -230,7 +148,7 @@ TODO.md     Pointer to the active roadmap and immediate task
 
 Requirements: Python 3.11 and [uv](https://docs.astral.sh/uv/).
 `worker/pyproject.toml` sets `requires-python = ">=3.11,<3.13"` because of
-Basic Pitch and TensorFlow. GitHub Actions installs 3.11.
+Basic Pitch. GitHub Actions installs 3.11.
 
 ```bash
 cd worker
@@ -238,22 +156,21 @@ uv sync
 uv run uvicorn app.main:app --reload
 ```
 
-Current endpoints:
+Endpoints:
 
 - `GET /health`
-- `GET /v1/transcriptions/demo`
+- `GET /v1/transcriptions/demo` (fake `dsp_v0` C major chord)
 - `GET /v1/audio/demo`
-- `POST /v1/transcriptions` (multipart file field `audio`; fake engine still
-  returns the bundled C major chord)
-
-Worker tests:
+- `POST /v1/transcriptions` (multipart field `audio`; live Basic Pitch)
 
 ```bash
-cd worker
-uv run pytest -q
+# from repo root, with worker running
+curl -F "audio=@fixtures/c-major-chord.wav" http://127.0.0.1:8000/v1/transcriptions
 ```
 
-Full repo check on macOS with Xcode installed:
+Worker tests: `cd worker && uv run pytest -q`
+
+Full repo check on macOS with Xcode:
 
 ```bash
 ./scripts/verify
@@ -262,22 +179,16 @@ Full repo check on macOS with Xcode installed:
 That command checks the locked Python environment, worker tests, dependency
 advisories, and static analysis, then compiles the iOS app and test bundles
 without code signing. GitHub Actions runs the same command on `macos-26`.
-Running the iOS tests still needs an installed simulator runtime or a
-configured development profile.
 
 ### iOS app
-
-Open the project in Xcode:
 
 ```bash
 open ios/OpenBard/OpenBard.xcodeproj
 ```
 
-The app loads `transcription.example.json` and `c-major-chord.wav` from its
-bundle. It shows a compact summary (`dsp_v0 · C major · 120 BPM · 3 notes`),
-a pinch-zoom piano roll of the C-E-G chord, an empty Score viewport until notes
-are locked, playback of the demo WAV, and import of a user audio file for
-playback only. The app does not call the worker.
+The app loads bundled transcription JSON and WAV fixtures. It shows a piano
+roll, edit toolbar, Score viewport (empty until Lock all), Play, and
+Import audio (playback only). It does not call the worker.
 
 ## License
 
@@ -290,7 +201,6 @@ personal prototype. Do not assume pull requests are reviewed.
 
 - Whether MuScriptor's authors permit use in a free, ad-free personal App Store
   release.
-- Which engine meets the fixture-based quality threshold.
 - Whether a backend is ever necessary for the public application.
 - What monetization model, if any, can fund the app after users validate the
   MVP.

@@ -1,55 +1,26 @@
 # Transcription Engine Adapters
 
-This directory contains adapter implementations for different transcription engines.
+`Transcriber` (`transcriber.py`) is the swap point for engines.
 
-## Architecture
+## Engines
 
-The `Transcriber` abstract interface (`transcriber.py`) defines the contract for all engines:
+| Engine | File | Used by |
+| --- | --- | --- |
+| Fake | `fake.py` | `GET /v1/transcriptions/demo`, contract tests |
+| Basic Pitch | `basic_pitch.py` | `POST /v1/transcriptions` (live) |
 
-```python
-class Transcriber(ABC):
-    def transcribe(self, audio_file: Path | BinaryIO) -> TranscriptionResult:
-        """Returns note events with confidence scores."""
+Basic Pitch maps model amplitude to both `velocity` and `confidence`. Tempo and
+key stay `null`. Decision and eval numbers: [STATUS.md](../../../STATUS.md).
 
-    @property
-    def engine_name(self) -> str:
-        """Engine identifier matching contracts/transcription.schema.json."""
+## Adding an engine
 
-    @property
-    def engine_version(self) -> str:
-        """Semantic version of the engine."""
-```
+1. Implement `Transcriber` in this directory.
+2. Map outputs to `TranscriptionResult` without inventing fields the model
+   does not provide. Register `engine` in `contracts/transcription.schema.json`.
+3. Add tests under `tests/`.
+4. Wire `main.py` (or keep fake for demo and live for POST).
 
-## Implemented Engines
+## On-device direction
 
-### FakeTranscriber (`fake.py`)
-- Returns hardcoded C major chord
-- Used for testing and demo endpoints
-- No external dependencies
-
-### Basic Pitch (planned)
-- Spotify's Basic Pitch model
-- Polyphonic transcription for solo/isolated instruments
-- Apache 2.0 license
-- See `docs/phase1-engine-decision.md` for evaluation results
-
-## Adding a New Engine
-
-1. Create a new file in this directory (e.g., `basic_pitch.py`)
-2. Implement the `Transcriber` interface
-3. Map model outputs to `TranscriptionResult`:
-   - `tempo_bpm` and `key_guess` can be `None` if unsupported
-   - Include confidence scores if available
-   - Set `engine_name` to match the schema enum
-4. Add tests in `tests/`
-5. Update `main.py` to use the new engine
-
-## Privacy and On-Device Direction
-
-The long-term goal is **on-device transcription** for privacy and zero marginal cost. 
-The worker architecture exists for:
-- Development and testing without iOS simulator overhead
-- Future optional cloud processing for heavy models
-- Adapter pattern validation
-
-Do not assume cloud processing is the production path.
+Long-term inference should run on-device. The worker is for development,
+fixture eval, and adapter validation — not the assumed production path.
