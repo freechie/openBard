@@ -311,22 +311,47 @@ enum PianoRollEdit {
         return result
     }
 
-    enum EdgeHit {
+    enum EdgeHit: Equatable {
         case left
         case right
         case body
     }
 
-    static func edgeHit(frame: CGRect, point: CGPoint, edgeWidth: CGFloat = 18) -> EdgeHit {
-        let half = min(edgeWidth, frame.width / 2)
-        let left = CGRect(x: frame.minX, y: frame.minY, width: half, height: frame.height)
-        let right = CGRect(x: frame.maxX - half, y: frame.minY, width: half, height: frame.height)
-        if right.contains(point) { return .right }
-        if left.contains(point) { return .left }
+    /// Default resize-edge width on the piano-roll note frames.
+    static let noteResizeEdgeWidth: CGFloat = 18
+    /// Default resize-edge width on the clip-overview hotspot.
+    static let overviewResizeEdgeWidth: CGFloat = 14
+    /// Each edge may consume at most this fraction of the frame, so at least
+    /// half the width stays a body/move hit (short notes used to have none).
+    static let maxResizeEdgeFraction: CGFloat = 0.25
+
+    /// Resize-edge size that always leaves a body/move zone in the centre.
+    static func resizeEdgeWidth(frameWidth: CGFloat, maxEdge: CGFloat) -> CGFloat {
+        min(max(maxEdge, 0), max(frameWidth, 0) * maxResizeEdgeFraction)
+    }
+
+    /// Classifies a horizontal touch as left-resize, right-resize, or body/move.
+    static func edgeHit(width: CGFloat, localX: CGFloat, edgeWidth: CGFloat) -> EdgeHit {
+        guard width > 0 else { return .body }
+        let edge = resizeEdgeWidth(frameWidth: width, maxEdge: edgeWidth)
+        if localX >= width - edge { return .right }
+        if localX < edge { return .left }
         return .body
     }
 
-    static func isRightEdgeHit(frame: CGRect, point: CGPoint, edgeWidth: CGFloat = 18) -> Bool {
+    static func edgeHit(
+        frame: CGRect,
+        point: CGPoint,
+        edgeWidth: CGFloat = noteResizeEdgeWidth
+    ) -> EdgeHit {
+        edgeHit(width: frame.width, localX: point.x - frame.minX, edgeWidth: edgeWidth)
+    }
+
+    static func isRightEdgeHit(
+        frame: CGRect,
+        point: CGPoint,
+        edgeWidth: CGFloat = noteResizeEdgeWidth
+    ) -> Bool {
         edgeHit(frame: frame, point: point, edgeWidth: edgeWidth) == .right
     }
 

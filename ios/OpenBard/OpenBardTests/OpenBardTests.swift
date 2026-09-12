@@ -321,6 +321,44 @@ struct OpenBardTests {
         #expect(PianoRollEdit.isRightEdgeHit(frame: frame, point: CGPoint(x: 135, y: 20)))
         #expect(!PianoRollEdit.isRightEdgeHit(frame: frame, point: CGPoint(x: 60, y: 20)))
     }
+
+    @Test func pianoRollEdgeHitKeepsMoveZoneOnShortNotes() {
+        func hit(width: CGFloat, localX: CGFloat, edgeWidth: CGFloat = PianoRollEdit.noteResizeEdgeWidth) -> PianoRollEdit.EdgeHit {
+            PianoRollEdit.edgeHit(
+                frame: CGRect(x: 10, y: 8, width: width, height: 16),
+                point: CGPoint(x: 10 + localX, y: 16),
+                edgeWidth: edgeWidth
+            )
+        }
+
+        // Default-zoom 16th (~4.7 pt), mixed-arrangement bass (~20 pt), and the
+        // old 36 pt collapse point must still have a body/move hit at centre.
+        for width in [CGFloat(4.7), 20, 36] {
+            #expect(hit(width: width, localX: width / 2) == .body)
+            let edge = PianoRollEdit.resizeEdgeWidth(frameWidth: width, maxEdge: PianoRollEdit.noteResizeEdgeWidth)
+            #expect(edge * 2 < width)
+        }
+
+        // Wide enough notes still distinguish left / body / right at the 18 pt cap.
+        let wide: CGFloat = 80
+        #expect(PianoRollEdit.resizeEdgeWidth(frameWidth: wide, maxEdge: PianoRollEdit.noteResizeEdgeWidth) == 18)
+        #expect(hit(width: wide, localX: 1) == .left)
+        #expect(hit(width: wide, localX: 17.9) == .left)
+        #expect(hit(width: wide, localX: 18.1) == .body)
+        #expect(hit(width: wide, localX: wide / 2) == .body)
+        #expect(hit(width: wide, localX: wide - 18.1) == .body)
+        #expect(hit(width: wide, localX: wide - 17.9) == .right)
+        #expect(hit(width: wide, localX: wide - 1) == .right)
+
+        // Overview min hotspot (18 pt, 14 pt max edges) must keep a move zone too.
+        let hotspot: CGFloat = 18
+        #expect(
+            hit(width: hotspot, localX: hotspot / 2, edgeWidth: PianoRollEdit.overviewResizeEdgeWidth) == .body
+        )
+        #expect(hit(width: 80, localX: 1, edgeWidth: PianoRollEdit.overviewResizeEdgeWidth) == .left)
+        #expect(hit(width: 80, localX: 40, edgeWidth: PianoRollEdit.overviewResizeEdgeWidth) == .body)
+        #expect(hit(width: 80, localX: 79, edgeWidth: PianoRollEdit.overviewResizeEdgeWidth) == .right)
+    }
     
     @Test func findsMergeCandidate() {
         let notes = [
