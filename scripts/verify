@@ -27,6 +27,9 @@ echo ""
 echo "Verifying Basic Pitch eval results against acceptance criteria..."
 python3 "$repo_root/scripts/check_basicpitch_eval.py"
 echo ""
+echo "Checking MusicXML measure rhythm..."
+python3 "$repo_root/scripts/check_musicxml_rhythm.py"
+echo ""
 
 derived_data="$(mktemp -d "${TMPDIR:-/tmp}/openbard-derived-data.XXXXXX")"
 trap 'rm -rf "$derived_data"' EXIT HUP INT TERM
