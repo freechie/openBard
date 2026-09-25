@@ -60,7 +60,7 @@ struct MusicXMLRhythmTests {
     }
 
     @Test func mixedDurationChordKeepsLongerTone() throws {
-        // Lowest note is the shortest: C4 quarter + E4 whole (audit 1b).
+        // The lowest note is the shortest. C4 quarter plus E4 whole (audit 1b).
         let notes = [
             note(pitch: 60, onset: 0, duration: 0.5),
             note(pitch: 64, onset: 0, duration: 2.0),

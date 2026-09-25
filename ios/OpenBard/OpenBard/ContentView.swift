@@ -235,7 +235,7 @@ struct ContentView: View {
             pianoViewport(transcription)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            Text("Draw notes · drag edges to resize · pinch or overview to zoom")
+            Text("Draw notes. Drag edges to resize. Pinch or use the overview to zoom")
                 .font(.caption)
                 .foregroundColor(theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
