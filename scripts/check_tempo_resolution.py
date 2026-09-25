@@ -126,11 +126,11 @@ def main() -> int:
     )
 
     if before != {"ui": 120.0, "score": 60.0, "midi": 60.0, "tap": 121.0}:
-        return fail(f"raw Isolated Piano surfaces changed: {before}")
+        return fail(f"raw Isolated Piano BPM values changed: {before}")
     if stored != 60.0:
         return fail(f"stored Isolated Piano tempo is {stored}, expected 60")
     if after != {"ui": 60.0, "score": 60.0, "midi": 60.0, "tap": 61.0}:
-        return fail(f"resolved Isolated Piano surfaces are {after}")
+        return fail(f"resolved Isolated Piano BPM values are {after}")
     if mixed_after["ui"] != 120.0 or example_after["ui"] != 120.0:
         return fail("explicit 120 BPM JSON must stay 120")
 

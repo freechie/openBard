@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
-"""
-Generate isolated-piano-basicpitch.json from Basic Pitch eval results.
-
-Converts the predicted_notes from fixtures/basic-pitch-eval-results.json
-into a transcription that matches contracts/transcription.schema.json.
-"""
+"""Write fixtures/isolated-piano-basicpitch.json from Basic Pitch eval results."""
 import json
 from pathlib import Path
 
 
 def midi_to_staff_hint(midi: int) -> str:
-    """Assign staff hint based on MIDI pitch."""
     if midi < 60:
         return "bass"
     else:
@@ -27,7 +21,6 @@ def main() -> None:
 
     predicted_notes = eval_results["predicted_notes"]
 
-    # Convert to transcription format
     note_events = []
     for note in predicted_notes:
         note_events.append({
@@ -50,7 +43,7 @@ def main() -> None:
     with open(output_path, "w") as f:
         json.dump(transcription, f, indent=2)
 
-    print(f"✓ Generated {output_path}")
+    print(f"Generated {output_path}")
     print(f"  {len(note_events)} notes from Basic Pitch")
 
 

@@ -258,7 +258,6 @@ struct ContentView: View {
         }
     }
 
-    /// Ableton-inspired transport: BPM + play/stop + draw.
     private func transportBar(_ transcription: TranscriptionResult) -> some View {
         let bpm = transcription.tempoBpm ?? NoteHelpers.defaultTempoBpm
         return HStack(spacing: 12) {

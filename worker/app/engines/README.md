@@ -1,4 +1,4 @@
-# Transcription Engine Adapters
+# Transcription engine adapters
 
 `Transcriber` (`transcriber.py`) is the swap point for engines.
 
@@ -10,7 +10,8 @@
 | Basic Pitch | `basic_pitch.py` | `POST /v1/transcriptions` (live) |
 
 Basic Pitch maps model amplitude to both `velocity` and `confidence`. Tempo and
-key stay `null`. Decision and eval numbers: [README.md § Status](../../../README.md#status).
+key stay `null`. See [README.md Status](../../../README.md#status) for the
+decision and eval numbers.
 
 ## Adding an engine
 
@@ -23,4 +24,4 @@ key stay `null`. Decision and eval numbers: [README.md § Status](../../../READM
 ## On-device direction
 
 Long-term inference should run on-device. The worker is for development,
-fixture eval, and adapter validation — not the assumed production path.
+fixture eval, and adapter validation. It is not the assumed production path.

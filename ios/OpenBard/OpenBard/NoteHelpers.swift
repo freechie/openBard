@@ -2,7 +2,6 @@ import CoreGraphics
 import Foundation
 
 enum NoteHelpers {
-    /// Split a note at its midpoint into two equal-duration notes
     static func splitNote(_ note: NoteEvent) -> (NoteEvent, NoteEvent)? {
         guard note.durationSeconds > 0.1 else { return nil }
 
@@ -30,7 +29,6 @@ enum NoteHelpers {
         return (firstNote, secondNote)
     }
 
-    /// Find an adjacent note that can be merged with the given note
     static func findMergeCandidate(for note: NoteEvent, in notes: [NoteEvent], currentIndex: Int) -> Int? {
         return notes.enumerated().first { otherIndex, otherNote in
             otherIndex != currentIndex &&
@@ -39,7 +37,6 @@ enum NoteHelpers {
         }?.offset
     }
 
-    /// Merge two notes into one
     static func mergeNotes(_ note1: NoteEvent, _ note2: NoteEvent) -> NoteEvent? {
         guard note1.pitchMidi == note2.pitchMidi else { return nil }
 
@@ -58,7 +55,6 @@ enum NoteHelpers {
         )
     }
 
-    /// Adjust note timing and/or pitch
     static func nudgeNote(_ note: NoteEvent, timeOffset: Double, pitchOffset: Int) -> NoteEvent? {
         let newOnset = max(0, note.onsetSeconds + timeOffset)
         let newPitch = note.pitchMidi + pitchOffset
@@ -317,20 +313,16 @@ enum PianoRollEdit {
         case body
     }
 
-    /// Default resize-edge width on the piano-roll note frames.
     static let noteResizeEdgeWidth: CGFloat = 18
-    /// Default resize-edge width on the clip-overview hotspot.
     static let overviewResizeEdgeWidth: CGFloat = 14
     /// Each edge may consume at most this fraction of the frame, so at least
     /// half the width stays a body/move hit (short notes used to have none).
     static let maxResizeEdgeFraction: CGFloat = 0.25
 
-    /// Resize-edge size that always leaves a body/move zone in the centre.
     static func resizeEdgeWidth(frameWidth: CGFloat, maxEdge: CGFloat) -> CGFloat {
         min(max(maxEdge, 0), max(frameWidth, 0) * maxResizeEdgeFraction)
     }
 
-    /// Classifies a horizontal touch as left-resize, right-resize, or body/move.
     static func edgeHit(width: CGFloat, localX: CGFloat, edgeWidth: CGFloat) -> EdgeHit {
         guard width > 0 else { return .body }
         let edge = resizeEdgeWidth(frameWidth: width, maxEdge: edgeWidth)
