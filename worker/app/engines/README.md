@@ -10,8 +10,7 @@
 | Basic Pitch | `basic_pitch.py` | `POST /v1/transcriptions` (live) |
 
 Basic Pitch maps model amplitude to both `velocity` and `confidence`. Tempo and
-key stay `null`. See [README.md Status](../../../README.md#status) for the
-decision and eval numbers.
+key stay `null`.
 
 ## Adding an engine
 
