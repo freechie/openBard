@@ -52,7 +52,8 @@ The iOS app edits notes locally; it does not call the worker.
 - Staff preview on Score workspace as soon as the roll has notes
 - **MIDI export** (Format 0 SMF) via Score workspace ShareLink
 - **MusicXML export** (partwise 3.1) via Score workspace ShareLink
-  - Limits: C major key only, no dotted rhythm encoding, rests typed but simple; validate in MuseScore
+  - Per-voice measures with `<backup>`; `<chord/>` only for equal durations; dotted/tied `<type>` matches `<duration>`
+  - Limits: C major key only; validate in MuseScore
 
 ### Not shipped
 
