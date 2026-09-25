@@ -37,6 +37,60 @@ struct TempoResolutionTests {
         #expect(transcription.tempoBpm == 120)
         #expect(transcription.noteEvents.count == 37)
     }
+
+    @Test func resolvingMissingTempoEstimatesOnlyWhenNil() {
+        let notes = [
+            NoteEvent(
+                pitchMidi: 60,
+                onsetSeconds: 0,
+                durationSeconds: 0.5,
+                velocity: 0.8,
+                confidence: 1,
+                staffHint: .treble
+            ),
+            NoteEvent(
+                pitchMidi: 64,
+                onsetSeconds: 1.0,
+                durationSeconds: 0.5,
+                velocity: 0.8,
+                confidence: 1,
+                staffHint: .treble
+            ),
+        ]
+
+        let estimated = TranscriptionLoader.resolvingMissingTempo(
+            TranscriptionResult(
+                engine: "test",
+                engineVersion: "0",
+                tempoBpm: nil,
+                keyGuess: nil,
+                noteEvents: notes
+            )
+        )
+        #expect(estimated.tempoBpm == 60)
+
+        let explicit = TranscriptionLoader.resolvingMissingTempo(
+            TranscriptionResult(
+                engine: "test",
+                engineVersion: "0",
+                tempoBpm: 90,
+                keyGuess: nil,
+                noteEvents: notes
+            )
+        )
+        #expect(explicit.tempoBpm == 90)
+
+        let empty = TranscriptionLoader.resolvingMissingTempo(
+            TranscriptionResult(
+                engine: "test",
+                engineVersion: "0",
+                tempoBpm: nil,
+                keyGuess: nil,
+                noteEvents: []
+            )
+        )
+        #expect(empty.tempoBpm == nil)
+    }
 }
 
 private func midiTempoBpm(in data: Data) -> Int? {
