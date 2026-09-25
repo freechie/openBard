@@ -585,10 +585,13 @@ struct ContentView: View {
             playbackError = "Draw notes to play"
             return
         }
-        do {
-            try audioPlayer.playNotes(transcription.noteEvents, name: "Notes")
-        } catch {
-            playbackError = "Could not play notes"
+        let notes = transcription.noteEvents
+        Task {
+            do {
+                try await audioPlayer.playNotes(notes, name: "Notes")
+            } catch {
+                playbackError = "Could not play notes"
+            }
         }
     }
 
@@ -610,7 +613,14 @@ struct ContentView: View {
             let destination = FileManager.default.temporaryDirectory
                 .appendingPathComponent("openbard-import-\(UUID().uuidString)-\(url.lastPathComponent)")
             try FileManager.default.copyItem(at: url, to: destination)
-            try audioPlayer.play(url: destination, name: url.lastPathComponent)
+            let importedName = url.lastPathComponent
+            Task {
+                do {
+                    try await audioPlayer.play(url: destination, name: importedName)
+                } catch {
+                    playbackError = "Could not play imported audio"
+                }
+            }
         } catch {
             playbackError = "Could not play imported audio"
         }
