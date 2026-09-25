@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager, suppress
 from io import BytesIO
 from pathlib import Path
 
@@ -13,8 +14,17 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEMO_AUDIO_PATH = REPO_ROOT / "fixtures" / "c-major-chord.wav"
 ALLOWED_AUDIO_SUFFIXES = {".wav", ".mp3", ".m4a", ".caf", ".aac"}
 
-app = FastAPI(title="openBard Worker")
 _transcriber = BasicPitchTranscriber()
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    with suppress(TranscriptionError):
+        _transcriber.load_model()
+    yield
+
+
+app = FastAPI(title="openBard Worker", lifespan=lifespan)
 
 
 @app.get("/health")
@@ -39,12 +49,12 @@ def demo_audio() -> FileResponse:
 
 
 @app.post("/v1/transcriptions", response_model=TranscriptionResult)
-async def transcribe_audio(audio: UploadFile = File(...)) -> TranscriptionResult:
+def transcribe_audio(audio: UploadFile = File(...)) -> TranscriptionResult:
     suffix = Path(audio.filename or "").suffix.lower()
     if suffix not in ALLOWED_AUDIO_SUFFIXES:
         raise HTTPException(status_code=400, detail="Unsupported audio type")
 
-    payload = BytesIO(await audio.read())
+    payload = BytesIO(audio.file.read())
     payload.name = audio.filename or f"upload{suffix}"
     try:
         return _transcriber.transcribe(payload)
