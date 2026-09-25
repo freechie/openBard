@@ -10,7 +10,7 @@ enum MIDIExporter {
     static let defaultTicksPerQuarter = 480
     static let defaultTempoBpm = 120.0
 
-    /// Build a Format-0 Standard MIDI File from note events (wall-clock timing).
+    /// Note onsets and durations are wall-clock seconds, converted with tempo.
     static func makeData(
         from notes: [NoteEvent],
         tempoBpm: Double? = nil,
