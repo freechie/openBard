@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""
-Verify Basic Pitch evaluation results meet acceptance criteria.
-
-Checks fixtures/basic-pitch-eval-results.json for:
-- Recall >= 95% (all expected notes detected)
-- No spurious long notes (duration > 2s)
-
-This ensures the Basic Pitch path doesn't regress.
-"""
+"""Fail if fixtures/basic-pitch-eval-results.json drops below 95% recall or has notes longer than 2s."""
 import json
 import sys
 from pathlib import Path
@@ -36,13 +28,13 @@ def main() -> int:
     acceptance_spurious = spurious_count == 0
 
     if acceptance_recall and acceptance_spurious:
-        print("✓ Basic Pitch meets acceptance criteria")
+        print("Basic Pitch meets acceptance criteria")
         return 0
     else:
         if not acceptance_recall:
-            print(f"✗ FAIL: Recall {recall:.1%} < 95%")
+            print(f"FAIL: Recall {recall:.1%} < 95%")
         if not acceptance_spurious:
-            print(f"✗ FAIL: Found {spurious_count} spurious long notes")
+            print(f"FAIL: Found {spurious_count} spurious long notes")
         return 1
 
 

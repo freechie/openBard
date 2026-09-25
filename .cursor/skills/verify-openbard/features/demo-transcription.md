@@ -18,9 +18,9 @@ Preconditions:
 - The worker is healthy at `http://127.0.0.1:18765`.
 - `control-openbard doctor` reports the expected URL.
 
-- **Fetch demo.** Request the demo transcription. Run `.cursor/skills/verify-openbard/scripts/control-openbard get /v1/transcriptions/demo --expect 200 --save demo-transcription`. `body.json` has `engine` `dsp_v0`, `engine_version` `0.1.0`, `tempo_bpm` `120.0`, and `key_guess` `C major`.
-- **Read notes.** Check `note_events`. There are three events. `pitch_midi` values are `60`, `64`, and `67` in that order. Each `onset_seconds` is `0.0`. Each `duration_seconds` is `2.0`. Each `staff_hint` is `treble`.
-- **Proof.** Keep `$OPENBARD_VERIFY_EVIDENCE_DIR/demo-transcription/body.json`. The file must include those metadata fields and the three pitches. Matching `contracts/transcription.example.json` note events is sufficient.
+- Request the demo transcription. Run `.cursor/skills/verify-openbard/scripts/control-openbard get /v1/transcriptions/demo --expect 200 --save demo-transcription`. `body.json` has `engine` `dsp_v0`, `engine_version` `0.1.0`, `tempo_bpm` `120.0`, and `key_guess` `C major`.
+- Check `note_events`. There are three events. `pitch_midi` values are `60`, `64`, and `67` in that order. Each `onset_seconds` is `0.0`. Each `duration_seconds` is `2.0`. Each `staff_hint` is `treble`.
+- Keep `$OPENBARD_VERIFY_EVIDENCE_DIR/demo-transcription/body.json`. The file must include those metadata fields and the three pitches. Matching `contracts/transcription.example.json` note events is sufficient.
 
 ## Gotchas
 

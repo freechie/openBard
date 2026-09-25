@@ -38,7 +38,6 @@ final class DemoAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
         isPlaying = true
     }
 
-    /// Render and play the current piano-roll notes as synthesized audio.
     func playNotes(_ notes: [NoteEvent], name: String = "Notes") throws {
         let wav = try NoteAudioRenderer.makeWAVData(from: notes)
         let url = FileManager.default.temporaryDirectory

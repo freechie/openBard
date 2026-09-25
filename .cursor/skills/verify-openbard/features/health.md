@@ -1,6 +1,6 @@
 # Health
 
-Health tells a caller whether the openBard worker process is up and willing to take HTTP.
+Health reports whether the openBard worker process is up.
 
 ## Sub-features
 
@@ -17,8 +17,8 @@ Preconditions:
 - The worker is healthy at `http://127.0.0.1:18765`.
 - `control-openbard doctor` prints `title=openBard Worker` and `health={"status":"ok"}`.
 
-- **Ask health.** Request the health document. Run `.cursor/skills/verify-openbard/scripts/control-openbard get /health --expect 200 --save health`. `status.txt` is `200`. Parsed `body.json` has `status` equal to `ok`.
-- **Proof.** Keep `$OPENBARD_VERIFY_EVIDENCE_DIR/health/body.json` and `request.txt`. The request line is `GET http://127.0.0.1:18765/health`.
+- Request the health document. Run `.cursor/skills/verify-openbard/scripts/control-openbard get /health --expect 200 --save health`. `status.txt` is `200`. Parsed `body.json` has `status` equal to `ok`.
+- Keep `$OPENBARD_VERIFY_EVIDENCE_DIR/health/body.json` and `request.txt`. The request line is `GET http://127.0.0.1:18765/health`.
 
 ## Gotchas
 
