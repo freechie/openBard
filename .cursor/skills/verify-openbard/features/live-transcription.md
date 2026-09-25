@@ -31,9 +31,9 @@ Preconditions:
 
 ## Gotchas
 
-- Startup already loaded the Basic Pitch model. The first POST can still take several seconds for inference. Wait for HTTP 200. Do not kill the worker at 1 second.
+- The worker already loaded the Basic Pitch model at startup. The first POST can still take several seconds for inference. Wait for HTTP 200. Do not kill the worker at 1 second.
 - `GET /v1/transcriptions/demo` is the fake engine. It does not prove live transcription.
-- Allowed suffixes are `.wav`, `.mp3`, `.m4a`, `.caf`, and `.aac`. The worker keys off the filename suffix, not only `Content-Type`.
+- Allowed suffixes are `.wav`, `.mp3`, `.m4a`, `.caf`, and `.aac`. The worker uses the filename suffix. `Content-Type` alone does not decide the type.
 - Basic Pitch does not guess tempo or key. Nulls are required. A filled tempo here is the wrong endpoint or a stale mock.
 - Extra harmonic pitches on other fixtures are expected. The C major smoke fixture must stay 60, 64, and 67.
 - iOS does not call this endpoint. A passing POST does not prove the piano-roll app.
