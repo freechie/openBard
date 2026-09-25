@@ -1,8 +1,8 @@
 # openBard
 
 openBard is an experimental iOS app. You edit note events on a piano roll, hear a
-sine preview, and export MIDI and MusicXML. A FastAPI worker can run Basic Pitch
-on an uploaded audio file. The iOS app does not call the worker.
+sine preview, and export MIDI and MusicXML. Import posts audio to the FastAPI
+worker (`POST /v1/transcriptions`) and puts the returned notes on the roll.
 
 ![openBard piano roll on iOS](docs/ios-piano-roll.jpg)
 
@@ -17,7 +17,9 @@ open ios/OpenBard/OpenBard.xcodeproj
 The app launches on a blank piano roll with Draw turned on. Draw notes, pinch or
 drag the clip overview to zoom time, tap Play for a sine preview, then switch to
 Score for a staff plus MIDI and MusicXML export. Library can load bundled
-fixtures or import audio for reference playback.
+fixtures or import audio. Import sends the file to the worker and plays it
+locally. The default worker URL is `http://127.0.0.1:8000` (Simulator to the
+uvicorn port below). Change it in Library if your worker listens elsewhere.
 
 ## Worker
 
