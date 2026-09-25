@@ -21,6 +21,25 @@ def midi_to_staff_hint(midi: int) -> str:
 class BasicPitchTranscriber(Transcriber):
     """Spotify Basic Pitch (Apache-2.0) for solo/isolated polyphonic audio."""
 
+    def __init__(self) -> None:
+        self._model: object | None = None
+
+    def load_model(self) -> object:
+        if self._model is not None:
+            return self._model
+        try:
+            from basic_pitch import ICASSP_2022_MODEL_PATH
+            from basic_pitch.inference import Model
+        except ImportError as exc:
+            raise TranscriptionError(
+                "basic-pitch is not installed or its backend failed to import"
+            ) from exc
+        try:
+            self._model = Model(ICASSP_2022_MODEL_PATH)
+        except Exception as exc:  # noqa: BLE001 — surface any model failure
+            raise TranscriptionError(f"Basic Pitch transcription failed: {exc}") from exc
+        return self._model
+
     def transcribe(self, audio_file: Path | BinaryIO) -> TranscriptionResult:
         path, cleanup = self._as_path(audio_file)
         try:
@@ -31,8 +50,12 @@ class BasicPitchTranscriber(Transcriber):
                     "basic-pitch is not installed or its backend failed to import"
                 ) from exc
 
+            model = self.load_model()
             try:
-                _model_output, _midi_data, note_events = predict(str(path))
+                _model_output, _midi_data, note_events = predict(
+                    str(path),
+                    model_or_model_path=model,
+                )
             except Exception as exc:  # noqa: BLE001 — surface any model failure
                 raise TranscriptionError(f"Basic Pitch transcription failed: {exc}") from exc
 
