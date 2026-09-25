@@ -2,26 +2,34 @@ import Foundation
 import Testing
 @testable import OpenBard
 
-@MainActor
-final class RecordingPlaybackAudioSession: PlaybackAudioSession {
+nonisolated final class RecordingPlaybackAudioSession: PlaybackAudioSession {
     enum Call: Equatable {
         case setPlaybackCategory
         case activate
         case deactivate
     }
 
-    private(set) var calls: [Call] = []
+    private let lock = NSLock()
+    private var recorded: [Call] = []
+
+    var calls: [Call] {
+        lock.withLock { recorded }
+    }
 
     func setPlaybackCategory() throws {
-        calls.append(.setPlaybackCategory)
+        record(.setPlaybackCategory)
     }
 
     func activate() async throws {
-        calls.append(.activate)
+        record(.activate)
     }
 
     func deactivate() async {
-        calls.append(.deactivate)
+        record(.deactivate)
+    }
+
+    private func record(_ call: Call) {
+        lock.withLock { recorded.append(call) }
     }
 }
 
