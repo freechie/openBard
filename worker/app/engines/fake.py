@@ -8,8 +8,6 @@ C_MAJOR_CHORD_PITCHES = (60, 64, 67)
 
 
 class FakeTranscriber(Transcriber):
-    """Demo transcriber that returns a hardcoded C major chord."""
-
     def transcribe(self, audio_file: Path | BinaryIO) -> TranscriptionResult:
         notes = [
             NoteEvent(
