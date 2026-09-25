@@ -2,7 +2,7 @@
 
 This directory is the maintained source for verifying the HTTP worker. Read this index before driving, then use the matching feature file as the recipe.
 
-The iOS piano-roll app is a different surface. This map does not cover it.
+This map does not cover the iOS piano-roll app.
 
 ## Baseline preconditions
 

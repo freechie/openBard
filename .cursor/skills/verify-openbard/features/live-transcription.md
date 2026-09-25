@@ -22,12 +22,12 @@ Preconditions:
 - `control-openbard doctor` reports the expected URL.
 - `fixtures/c-major-chord.wav` exists.
 
-- **Upload chord.** Send the C major fixture. Run `.cursor/skills/verify-openbard/scripts/control-openbard post-audio fixtures/c-major-chord.wav --expect 200 --save live-transcription`. `status.txt` is `200`.
-- **Read engine.** `body.json` has `engine` `basic_pitch`. `tempo_bpm` is JSON null. `key_guess` is JSON null.
-- **Read pitches.** Sorted `pitch_midi` values are `60`, `64`, and `67`. There are three notes.
-- **Read amplitude mapping.** For every note, `confidence` equals `velocity`. Each `duration_seconds` is greater than 0. Each `staff_hint` is `treble`.
-- **Reject type.** Upload a `.txt` file. Run `curl -sS -D - -o /tmp/openbard-reject.json -F "audio=@-;filename=notes.txt;type=text/plain" "$(.cursor/skills/verify-openbard/scripts/control-openbard url)/v1/transcriptions" <<< 'not audio'`. HTTP status is 400. Body is `{"detail":"Unsupported audio type"}`. Copy those headers and body into `$OPENBARD_VERIFY_EVIDENCE_DIR/live-transcription-reject/` if you need them for the same run.
-- **Proof.** Keep `$OPENBARD_VERIFY_EVIDENCE_DIR/live-transcription/request.txt` and `body.json`. The request names `fixtures/c-major-chord.wav`. The body shows `basic_pitch` and pitches 60, 64, and 67.
+- Send the C major fixture. Run `.cursor/skills/verify-openbard/scripts/control-openbard post-audio fixtures/c-major-chord.wav --expect 200 --save live-transcription`. `status.txt` is `200`.
+- `body.json` has `engine` `basic_pitch`. `tempo_bpm` is JSON null. `key_guess` is JSON null.
+- Sorted `pitch_midi` values are `60`, `64`, and `67`. There are three notes.
+- For every note, `confidence` equals `velocity`. Each `duration_seconds` is greater than 0. Each `staff_hint` is `treble`.
+- Upload a `.txt` file. Run `curl -sS -D - -o /tmp/openbard-reject.json -F "audio=@-;filename=notes.txt;type=text/plain" "$(.cursor/skills/verify-openbard/scripts/control-openbard url)/v1/transcriptions" <<< 'not audio'`. HTTP status is 400. Body is `{"detail":"Unsupported audio type"}`. Copy those headers and body into `$OPENBARD_VERIFY_EVIDENCE_DIR/live-transcription-reject/` if you need them for the same run.
+- Keep `$OPENBARD_VERIFY_EVIDENCE_DIR/live-transcription/request.txt` and `body.json`. The request names `fixtures/c-major-chord.wav`. The body shows `basic_pitch` and pitches 60, 64, and 67.
 
 ## Gotchas
 
