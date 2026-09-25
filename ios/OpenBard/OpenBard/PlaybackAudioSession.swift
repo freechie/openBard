@@ -14,19 +14,19 @@ nonisolated enum PlaybackAudioSessionError: Error {
     case deactivationFailed
 }
 
-private let activateWithOptionsSelector = NSSelectorFromString("activateWithOptions:completionHandler:")
-private let deactivateWithOptionsSelector = NSSelectorFromString("deactivateWithOptions:completionHandler:")
-
 /// Live `AVAudioSession` wrapper. Uses the asynchronous activate/deactivate API when
 /// the running OS implements it; otherwise hops synchronous `setActive` off the main actor.
 nonisolated final class SystemPlaybackAudioSession: PlaybackAudioSession {
+    private static let activateSelector = NSSelectorFromString("activateWithOptions:completionHandler:")
+    private static let deactivateSelector = NSSelectorFromString("deactivateWithOptions:completionHandler:")
+
     func setPlaybackCategory() throws {
         try AVAudioSession.sharedInstance().setCategory(.playback)
     }
 
     func activate() async throws {
         let session = AVAudioSession.sharedInstance()
-        if session.responds(to: activateWithOptionsSelector) {
+        if session.responds(to: Self.activateSelector) {
             try await Self.activateAsynchronously(session)
             return
         }
@@ -35,7 +35,7 @@ nonisolated final class SystemPlaybackAudioSession: PlaybackAudioSession {
 
     func deactivate() async {
         let session = AVAudioSession.sharedInstance()
-        if session.responds(to: deactivateWithOptionsSelector) {
+        if session.responds(to: Self.deactivateSelector) {
             try? await Self.deactivateAsynchronously(session)
             return
         }
@@ -85,7 +85,7 @@ nonisolated final class SystemPlaybackAudioSession: PlaybackAudioSession {
 /// ObjC surface for `activateWithOptions:completionHandler:` and
 /// `deactivateWithOptions:completionHandler:`. Declared locally so this still compiles
 /// if the iOS SDK overlays those methods as watchOS-only.
-@objc private protocol AVAudioSessionAsyncActivation: NSObjectProtocol {
+@objc nonisolated private protocol AVAudioSessionAsyncActivation: NSObjectProtocol {
     @objc(activateWithOptions:completionHandler:)
     func activateWithOptions(
         _ options: UInt,
