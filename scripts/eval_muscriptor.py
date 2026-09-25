@@ -32,7 +32,7 @@ def evaluate_muscriptor() -> dict[str, Any]:
 
     try:
         from muscriptor import TranscriptionModel
-        print("MuScriptor imported successfully")
+        print("Imported MuScriptor")
     except ImportError as e:
         return {
             "status": "blocked",
@@ -162,7 +162,7 @@ def main() -> None:
     print()
 
     if result["status"] == "success":
-        print("MuScriptor evaluation completed successfully")
+        print("MuScriptor evaluation finished")
         print(f"  Latency: {result['performance']['latency_seconds']}s")
         if result['performance']['memory_mb']:
             print(f"  Memory: {result['performance']['memory_mb']} MB")

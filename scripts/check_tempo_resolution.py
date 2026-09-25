@@ -77,7 +77,7 @@ def load_fixture(path: Path) -> tuple[float | None, list[dict]]:
     return payload.get("tempo_bpm"), notes
 
 
-def surfaces(tempo_bpm: float | None, notes: list[dict]) -> dict[str, float]:
+def bpm_readings(tempo_bpm: float | None, notes: list[dict]) -> dict[str, float]:
     return {
         "ui": ui_bpm(tempo_bpm),
         "score": score_bpm(notes, tempo_bpm),
@@ -108,11 +108,11 @@ def main() -> int:
     if example_json != 120:
         return fail(f"example json tempo_bpm is {example_json}, expected 120")
 
-    before = surfaces(isolated_json, isolated_notes)
+    before = bpm_readings(isolated_json, isolated_notes)
     stored = resolving_missing_tempo(isolated_json, isolated_notes)
-    after = surfaces(stored, isolated_notes)
-    mixed_after = surfaces(resolving_missing_tempo(mixed_json, mixed_notes), mixed_notes)
-    example_after = surfaces(resolving_missing_tempo(example_json, example_notes), example_notes)
+    after = bpm_readings(stored, isolated_notes)
+    mixed_after = bpm_readings(resolving_missing_tempo(mixed_json, mixed_notes), mixed_notes)
+    example_after = bpm_readings(resolving_missing_tempo(example_json, example_notes), example_notes)
 
     print("Isolated Piano (tempo_bpm null in JSON)")
     print(

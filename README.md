@@ -5,7 +5,7 @@ editable notes, then later into sheet music.
 
 ![openBard piano roll on iOS](docs/ios-piano-roll.jpg)
 
-Shipped today: JSON contract, FastAPI worker with live Basic Pitch on
+Shipped: JSON contract, FastAPI worker with live Basic Pitch on
 upload, blank-first Ableton-style piano roll (Draw, BPM, overview zoom,
 synth Play), ScoreBuilder staff from all notes, MIDI and MusicXML export.
 Not shipped: on-device inference, guided recording, app-to-worker wiring.
