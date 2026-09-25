@@ -10,10 +10,7 @@ enum TranscriptionLoader {
         }
 
         let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-
-        return try decoder.decode(TranscriptionResult.self, from: data)
+        return try decodeTranscription(from: data)
     }
 
     static func loadFixture(_ fixture: AudioFixture, from bundle: Bundle = .main) throws -> TranscriptionResult? {
@@ -29,10 +26,21 @@ enum TranscriptionLoader {
         }
 
         let data = try Data(contentsOf: url)
+        return try decodeTranscription(from: data)
+    }
+
+    static func resolvingMissingTempo(_ result: TranscriptionResult) -> TranscriptionResult {
+        var filled = result
+        if filled.tempoBpm == nil, !filled.noteEvents.isEmpty {
+            filled.tempoBpm = ScoreBuilder.estimateTempoBpm(filled.noteEvents)
+        }
+        return filled
+    }
+
+    private static func decodeTranscription(from data: Data) throws -> TranscriptionResult {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-
-        return try decoder.decode(TranscriptionResult.self, from: data)
+        return resolvingMissingTempo(try decoder.decode(TranscriptionResult.self, from: data))
     }
 
     static func demoAudioURL(from bundle: Bundle = .main) throws -> URL {
