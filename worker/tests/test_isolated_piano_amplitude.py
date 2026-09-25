@@ -1,11 +1,15 @@
 import json
+import sys
 from pathlib import Path
 
 import pytest
 
-from app.engines.basic_pitch import BasicPitchTranscriber, amplitude_fields
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+
+from app.engines.basic_pitch import BasicPitchTranscriber, amplitude_fields
+from eval_basic_pitch import predicted_notes_from_events
+
 FIXTURE = REPO_ROOT / "fixtures" / "isolated-piano-basicpitch.json"
 IOS_COPY = REPO_ROOT / "ios" / "OpenBard" / "OpenBard" / "isolated-piano-basicpitch.json"
 
@@ -33,6 +37,12 @@ def test_to_result_maps_amplitude_to_velocity_and_confidence(
     note = result.note_events[0]
     assert note.velocity == 0.5
     assert note.confidence == 0.5
+
+
+def test_eval_maps_amplitude_tuple_to_velocity_and_confidence() -> None:
+    notes = predicted_notes_from_events([(0.0, 1.0, 60, 0.5, None)])
+    assert notes[0]["velocity"] == 0.5
+    assert notes[0]["confidence"] == 0.5
 
 
 def test_amplitude_fields_uses_unit_interval_directly() -> None:
