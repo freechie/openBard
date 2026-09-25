@@ -26,7 +26,7 @@ def load_ground_truth(path: Path) -> dict[str, Any]:
 
 def evaluate_muscriptor() -> dict[str, Any]:
     print("=" * 70)
-        print("MuScriptor evaluation on mixed arrangement fixture")
+    print("MuScriptor evaluation on mixed arrangement fixture")
     print("=" * 70)
     print()
 
