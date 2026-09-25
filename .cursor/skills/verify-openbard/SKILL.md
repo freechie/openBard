@@ -7,7 +7,7 @@ description: Drive the openBard FastAPI worker over HTTP on 127.0.0.1 (GET /heal
 
 openBard ships an iOS piano-roll editor and a FastAPI worker. The iOS app loads bundled JSON. It does not call the worker. This skill drives the worker over HTTP, which is the path an agent can launch on Linux and in local Python. On macOS, `./scripts/verify` still compiles iOS. It does not launch Simulator.
 
-Read `features/README.md` before a drive. Drive from that map. A convenient extra endpoint is not coverage for a mapped feature you skipped.
+Read `features/README.md` before a drive. Drive from that map. Hitting an extra endpoint does not cover a mapped feature you skipped.
 
 ## Launch
 
@@ -63,7 +63,7 @@ Drive HTTP with `control-openbard`. It wraps curl against the launched URL. Mult
 .cursor/skills/verify-openbard/scripts/control-openbard post-audio fixtures/c-major-chord.wav --expect 200 --save live-transcription
 ```
 
-Prefer these handles over coordinates or tab order.
+Use these HTTP paths.
 
 - `GET /health`
 - `GET /v1/transcriptions/demo` (fake `dsp_v0` C major chord)
@@ -120,4 +120,4 @@ After cleanup, confirm evidence files still exist under `OPENBARD_VERIFY_EVIDENC
 
 `launch` is idempotent for a healthy instance of the same `OPENBARD_VERIFY_RUN_ID`. A second launch prints `already running` and leaves the process up.
 
-Keep the map honest with `/maintain-verification-skill` when worker routes or fixtures change.
+Keep this map in sync with `/maintain-verification-skill` when worker routes or fixtures change.

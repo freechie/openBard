@@ -13,7 +13,7 @@ struct DurationGlyph: Equatable {
 }
 
 enum MusicXMLExporter {
-    static let divisionsPerQuarter = 4 // gridBeats 0.25 → 1 division
+    static let divisionsPerQuarter = 4 // 0.25 beat grid is 1 division
     static let measureDivisions = Int(ScoreBuilder.beatsPerMeasure) * divisionsPerQuarter
 
     /// Standard (possibly dotted) values on the 16th-note grid, longest first.
@@ -28,7 +28,6 @@ enum MusicXMLExporter {
         DurationGlyph(durationBeats: 0.25, type: "16th", dots: 0),
     ]
 
-    /// Build partwise MusicXML 3.1 from a ScoreBuilder score.
     static func makeData(from score: Score) throws -> Data {
         guard !score.measures.isEmpty else { throw MusicXMLExportError.noScore }
 

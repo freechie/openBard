@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Line-faithful port of ScoreBuilder + MusicXMLExporter rhythm rules.
+"""Linux cannot run the Swift tests.
 
-Linux cannot run the Swift tests. This script mirrors ios/OpenBard/OpenBard/
-ScoreBuilder.swift and MusicXMLExporter.swift closely enough to assert that
-every voice in every measure sums to a complete 4/4 bar, that overlapping
+Mirrors ScoreBuilder.swift and MusicXMLExporter.swift closely enough to assert
+that every voice in every measure sums to a complete 4/4 bar, that overlapping
 notes do not overflow, and that <type> matches <duration>.
 """
 
@@ -667,7 +666,7 @@ def main(argv: list[str] | None = None) -> int:
         write_emit_dir(args.emit, emitted, summaries)
         (args.emit / "grid-durations.txt").write_text(grid_table)
 
-    print("✓ MusicXML rhythm checks passed")
+    print("MusicXML rhythm checks passed")
     for line in summaries:
         print(f"  {line}")
     return 0

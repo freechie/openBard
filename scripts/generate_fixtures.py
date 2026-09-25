@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""
-Generate synthetic audio fixtures with known ground truth for transcription evaluation.
-
-This creates:
-1. isolated-piano.wav: A polyphonic piano-like chord progression
-2. mixed-arrangement.wav: A small arrangement with piano + bass
-
-Both fixtures have accompanying ground truth JSON files.
-"""
+"""Write isolated-piano.wav and mixed-arrangement.wav plus ground-truth JSON."""
 import json
 from pathlib import Path
 from typing import Any
@@ -17,7 +9,6 @@ from scipy.io import wavfile
 
 
 def midi_to_freq(midi_note: int) -> float:
-    """Convert MIDI note number to frequency in Hz."""
     return 440.0 * 2.0 ** ((midi_note - 69) / 12.0)
 
 
@@ -27,9 +18,6 @@ def generate_piano_tone(
     sample_rate: int = 44100,
     amplitude: float = 0.3,
 ) -> np.ndarray:
-    """
-    Generate a piano-like tone using additive synthesis with harmonic decay.
-    """
     t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
     
     # Piano-like harmonic series with decay
@@ -56,17 +44,12 @@ def generate_bass_tone(
     sample_rate: int = 44100,
     amplitude: float = 0.25,
 ) -> np.ndarray:
-    """
-    Generate a bass-like tone with stronger fundamental.
-    """
     t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
     
-    # Bass has strong fundamental and fewer upper harmonics
     signal = np.sin(2 * np.pi * freq * t)
     signal += 0.3 * np.sin(2 * np.pi * freq * 2 * t)
     signal += 0.15 * np.sin(2 * np.pi * freq * 3 * t)
     
-    # Envelope
     attack = 0.02
     decay_rate = 1.5
     envelope = np.ones_like(t)
@@ -80,12 +63,8 @@ def generate_bass_tone(
 def create_isolated_piano_fixture(
     output_path: Path, ground_truth_path: Path, sample_rate: int = 44100
 ) -> None:
-    """
-    Create an isolated polyphonic piano fixture: C major - G major - Am - F major progression.
-    Each chord lasts approximately 2.5 seconds, total ~10 seconds.
-    """
-    # Define chord progression with timing
-    # Format: (onset_seconds, duration_seconds, [midi_notes], velocity)
+    """C major, G major, A minor, F major. Each chord is about 2.5s. Total about 10s."""
+    # (onset_seconds, duration_seconds, [midi_notes], velocity)
     chord_progression = [
         # C major (C4, E4, G4)
         (0.0, 2.5, [60, 64, 67], 0.8),
@@ -119,16 +98,14 @@ def create_isolated_piano_fixture(
                 "staff_hint": "treble" if pitch >= 60 else "bass"
             })
     
-    # Normalize to prevent clipping
+    # Peak-normalize so stacked chord tones do not clip.
     max_val = np.max(np.abs(audio))
     if max_val > 0:
         audio = audio / max_val * 0.9
     
-    # Convert to 16-bit PCM
     audio_int16 = (audio * 32767).astype(np.int16)
     wavfile.write(output_path, sample_rate, audio_int16)
     
-    # Write ground truth
     ground_truth = {
         "engine": "synthetic",
         "engine_version": "1.0.0",
@@ -148,11 +125,8 @@ def create_isolated_piano_fixture(
 def create_mixed_arrangement_fixture(
     output_path: Path, ground_truth_path: Path, sample_rate: int = 44100
 ) -> None:
-    """
-    Create a small mixed arrangement: piano chords + bass line.
-    Total ~12 seconds.
-    """
-    # Piano part: Simpler two-note dyads
+    """Piano dyads plus a walking bass. Total about 12s."""
+    # Piano part is two-note dyads
     piano_notes = [
         # C-E dyad
         (0.0, 2.0, [60, 64], 0.7),
@@ -168,7 +142,7 @@ def create_mixed_arrangement_fixture(
         (10.0, 2.0, [55, 59, 62], 0.75),
     ]
     
-    # Bass line: Walking quarter notes (0.5s each at 120 bpm)
+    # Bass line is walking quarter notes (0.5s each at 120 bpm)
     bass_line = [
         (0.0, 0.5, 48),    # C2
         (0.5, 0.5, 50),    # D2
@@ -200,7 +174,6 @@ def create_mixed_arrangement_fixture(
     audio = np.zeros(int(sample_rate * total_duration))
     note_events = []
     
-    # Generate piano part
     for onset, duration, pitches, velocity in piano_notes:
         onset_sample = int(onset * sample_rate)
         for pitch in pitches:
@@ -218,7 +191,6 @@ def create_mixed_arrangement_fixture(
                 "staff_hint": "treble"
             })
     
-    # Generate bass line
     bass_velocity = 0.6
     for onset, duration, pitch in bass_line:
         onset_sample = int(onset * sample_rate)
@@ -236,16 +208,13 @@ def create_mixed_arrangement_fixture(
             "staff_hint": "bass"
         })
     
-    # Normalize
     max_val = np.max(np.abs(audio))
     if max_val > 0:
         audio = audio / max_val * 0.9
     
-    # Convert to 16-bit PCM
     audio_int16 = (audio * 32767).astype(np.int16)
     wavfile.write(output_path, sample_rate, audio_int16)
     
-    # Write ground truth
     ground_truth = {
         "engine": "synthetic",
         "engine_version": "1.0.0",
@@ -266,7 +235,6 @@ def main() -> None:
     fixtures_dir = Path(__file__).resolve().parents[1] / "fixtures"
     fixtures_dir.mkdir(exist_ok=True)
     
-    # Create isolated piano fixture
     create_isolated_piano_fixture(
         fixtures_dir / "isolated-piano.wav",
         fixtures_dir / "isolated-piano-ground-truth.json"
@@ -274,7 +242,6 @@ def main() -> None:
     
     print()
     
-    # Create mixed arrangement fixture
     create_mixed_arrangement_fixture(
         fixtures_dir / "mixed-arrangement.wav",
         fixtures_dir / "mixed-arrangement-ground-truth.json"

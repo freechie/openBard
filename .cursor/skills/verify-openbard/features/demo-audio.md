@@ -1,6 +1,6 @@
 # Demo audio
 
-Demo audio downloads the bundled C major chord WAV that the worker serves as `c-major-chord.wav`.
+Demo audio downloads the bundled C major chord WAV. The response filename is `c-major-chord.wav`.
 
 ## Sub-features
 
@@ -18,10 +18,10 @@ Preconditions:
 - The worker is healthy at `http://127.0.0.1:18765`.
 - `fixtures/c-major-chord.wav` exists in the repo.
 
-- **Download audio.** Request the demo WAV. Run `.cursor/skills/verify-openbard/scripts/control-openbard get /v1/audio/demo --expect 200 --save demo-audio`. `status.txt` is `200`.
-- **Check headers.** `headers.txt` contains `content-type: audio/wav` and `filename="c-major-chord.wav"`.
-- **Check bytes.** `body.wav` starts with `RIFF` and `WAVE` at offset 8. `cmp body.wav fixtures/c-major-chord.wav` exits 0.
-- **Proof.** Keep `$OPENBARD_VERIFY_EVIDENCE_DIR/demo-audio/body.wav` and `headers.txt`.
+- Request the demo WAV. Run `.cursor/skills/verify-openbard/scripts/control-openbard get /v1/audio/demo --expect 200 --save demo-audio`. `status.txt` is `200`.
+- `headers.txt` contains `content-type: audio/wav` and `filename="c-major-chord.wav"`.
+- `body.wav` starts with `RIFF` and `WAVE` at offset 8. `cmp body.wav fixtures/c-major-chord.wav` exits 0.
+- Keep `$OPENBARD_VERIFY_EVIDENCE_DIR/demo-audio/body.wav` and `headers.txt`.
 
 ## Gotchas
 

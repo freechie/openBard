@@ -1,5 +1,3 @@
-"""Basic Pitch transcription adapter."""
-
 from __future__ import annotations
 
 import tempfile
@@ -12,7 +10,7 @@ from app.models import NoteEvent, TranscriptionResult
 
 
 def midi_to_staff_hint(midi: int) -> str:
-    """Assign staff hint from MIDI pitch. Middle C and above → treble."""
+    """MIDI 60 (middle C) and above is treble."""
     if midi < 60:
         return "bass"
     return "treble"
@@ -41,7 +39,7 @@ class BasicPitchTranscriber(Transcriber):
             ) from exc
         try:
             self._model = Model(ICASSP_2022_MODEL_PATH)
-        except Exception as exc:  # noqa: BLE001 — surface any model failure
+        except Exception as exc:  # noqa: BLE001  backends raise more than Exception subclasses
             raise TranscriptionError(f"Basic Pitch transcription failed: {exc}") from exc
         return self._model
 
@@ -61,7 +59,7 @@ class BasicPitchTranscriber(Transcriber):
                     str(path),
                     model_or_model_path=model,
                 )
-            except Exception as exc:  # noqa: BLE001 — surface any model failure
+            except Exception as exc:  # noqa: BLE001  backends raise more than Exception subclasses
                 raise TranscriptionError(f"Basic Pitch transcription failed: {exc}") from exc
 
             return self._to_result(note_events)

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Ableton-style clip overview: full timeline with a draggable/resizable visible hotspot.
+/// Full timeline with a draggable, resizable visible hotspot.
 struct PianoRollOverview: View {
     let notes: [NoteEvent]
     @Binding var timeWindow: PianoRollTimeWindow
