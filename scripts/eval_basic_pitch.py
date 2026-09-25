@@ -14,6 +14,11 @@ import time
 from pathlib import Path
 from typing import Any
 
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT / "worker") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "worker"))
@@ -181,8 +186,9 @@ def main() -> None:
         return
     
     # Measure memory before transcription
-    import psutil
-
+    if psutil is None:
+        print("ERROR: psutil is not installed.")
+        return
     process = psutil.Process()
     mem_before = process.memory_info().rss / 1024 / 1024  # MB
     
