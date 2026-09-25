@@ -25,11 +25,13 @@ Needs Python 3.11 via uv, `uv sync --frozen` in `worker/`, and `curl`. `worker/.
 
 Ready when `GET http://127.0.0.1:18765/health` returns exactly `{"status":"ok"}`. The log at `/tmp/openbard-verify-run-$OPENBARD_VERIFY_RUN_ID/uvicorn.log` contains `Uvicorn running on http://127.0.0.1:18765`. Launch prints `url=`, `pid=`, and `log=`.
 
+`load_model` runs in FastAPI lifespan before those checks pass. TensorFlow init can take several seconds. That is startup, not the first POST.
+
 Do not use `uv run uvicorn --reload` for verification. The helper starts `worker/.venv/bin/uvicorn app.main:app` so the stored PID owns the listen socket. README's `--reload` command is for humans editing code.
 
 Default verify port is `18765`, not README's `8000`, so a developer server on 8000 stays untouched. If 18765 is busy, set `OPENBARD_VERIFY_PORT` to a free port. Do not kill a process this run did not start.
 
-A second instance is allowed. Give it a different `OPENBARD_VERIFY_RUN_ID` and `OPENBARD_VERIFY_PORT`. There is no shared writable data directory. Each process loads TensorFlow on the first `POST /v1/transcriptions`, so a second instance costs RAM. Do not drive a worker this run did not launch.
+A second instance is allowed. Give it a different `OPENBARD_VERIFY_RUN_ID` and `OPENBARD_VERIFY_PORT`. There is no shared writable data directory. Each process loads TensorFlow during lifespan startup, so a second instance costs RAM as soon as it is ready. Do not drive a worker this run did not launch.
 
 Linux has no Xcode. Do not run `./scripts/verify` or Simulator as part of this skill.
 
@@ -73,7 +75,7 @@ Use these HTTP paths.
 
 Recipes live in `features/`. Capture the request and the resulting body. After a mutation-style POST, read the JSON fields. Do not trust a 200 with an empty `note_events` list for the C major fixture.
 
-First `POST /v1/transcriptions` after process start can take several seconds while Basic Pitch loads TensorFlow. Wait for HTTP 200. The helper curl timeout is 120 seconds. Do not treat a slow first call as a hang. After that first POST, later POSTs reuse the loaded model.
+Startup already loaded the model. The first `POST /v1/transcriptions` can still take several seconds for inference. Wait for HTTP 200. The helper curl timeout is 120 seconds. Do not treat a slow first call as a hang. Later POSTs reuse the loaded model.
 
 `GET /docs` is FastAPI Swagger. It is not an openBard product screen. Do not use it as proof of a mapped feature.
 

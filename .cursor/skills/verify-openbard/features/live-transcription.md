@@ -31,7 +31,7 @@ Preconditions:
 
 ## Gotchas
 
-- The first POST after process start can take several seconds while Basic Pitch loads. Wait for HTTP 200. Do not kill the worker at 1 second.
+- Startup already loaded the Basic Pitch model. The first POST can still take several seconds for inference. Wait for HTTP 200. Do not kill the worker at 1 second.
 - `GET /v1/transcriptions/demo` is the fake engine. It does not prove live transcription.
 - Allowed suffixes are `.wav`, `.mp3`, `.m4a`, `.caf`, and `.aac`. The worker keys off the filename suffix, not only `Content-Type`.
 - Basic Pitch does not guess tempo or key. Nulls are required. A filled tempo here is the wrong endpoint or a stale mock.
