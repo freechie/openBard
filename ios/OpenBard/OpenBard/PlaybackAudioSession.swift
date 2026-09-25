@@ -4,7 +4,7 @@ import Foundation
 /// Session calls used by demo playback. Injected so tests can record activate/deactivate
 /// without touching `AVAudioSession`.
 nonisolated protocol PlaybackAudioSession: AnyObject {
-    func setPlaybackCategory() throws
+    func setPlaybackCategory() async throws
     func activate() async throws
     func deactivate() async
 }
@@ -14,65 +14,86 @@ nonisolated enum PlaybackAudioSessionError: Error {
     case deactivationFailed
 }
 
+/// Serial queue for session and player I/O so `setCategory`, `setActive`, and
+/// `prepareToPlay` never run on the main actor.
+nonisolated enum PlaybackAudioWork {
+    static let queue = DispatchQueue(label: "openbard.playback-audio", qos: .userInitiated)
+
+    static func run<T: Sendable>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                do {
+                    continuation.resume(returning: try work())
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    static func run<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
+        await withCheckedContinuation { continuation in
+            queue.async {
+                continuation.resume(returning: work())
+            }
+        }
+    }
+}
+
 /// Live `AVAudioSession` wrapper. Uses the asynchronous activate/deactivate API when
 /// the running OS implements it; otherwise hops synchronous `setActive` off the main actor.
 nonisolated final class SystemPlaybackAudioSession: PlaybackAudioSession {
     private static let activateSelector = NSSelectorFromString("activateWithOptions:completionHandler:")
     private static let deactivateSelector = NSSelectorFromString("deactivateWithOptions:completionHandler:")
 
-    func setPlaybackCategory() throws {
-        try AVAudioSession.sharedInstance().setCategory(.playback)
+    func setPlaybackCategory() async throws {
+        try await PlaybackAudioWork.run {
+            try AVAudioSession.sharedInstance().setCategory(.playback)
+        }
     }
 
     func activate() async throws {
-        let session = AVAudioSession.sharedInstance()
-        if session.responds(to: Self.activateSelector) {
-            try await Self.activateAsynchronously(session)
-            return
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            PlaybackAudioWork.queue.async {
+                let session = AVAudioSession.sharedInstance()
+                if session.responds(to: Self.activateSelector) {
+                    let trampoline = unsafeBitCast(session, to: AVAudioSessionAsyncActivation.self)
+                    trampoline.activateWithOptions(0) { success, error in
+                        if success {
+                            continuation.resume()
+                        } else {
+                            continuation.resume(throwing: error ?? PlaybackAudioSessionError.activationFailed)
+                        }
+                    }
+                    return
+                }
+                do {
+                    try session.setActive(true)
+                    continuation.resume()
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
         }
-        try await Self.setActiveOffMainActor(true)
     }
 
     func deactivate() async {
-        let session = AVAudioSession.sharedInstance()
-        if session.responds(to: Self.deactivateSelector) {
-            try? await Self.deactivateAsynchronously(session)
-            return
-        }
-        try? await Self.setActiveOffMainActor(false)
-    }
-
-    private static func activateAsynchronously(_ session: AVAudioSession) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            let trampoline = unsafeBitCast(session, to: AVAudioSessionAsyncActivation.self)
-            trampoline.activateWithOptions(0) { success, error in
-                if success {
-                    continuation.resume()
-                } else {
-                    continuation.resume(throwing: error ?? PlaybackAudioSessionError.activationFailed)
+        try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            PlaybackAudioWork.queue.async {
+                let session = AVAudioSession.sharedInstance()
+                if session.responds(to: Self.deactivateSelector) {
+                    let trampoline = unsafeBitCast(session, to: AVAudioSessionAsyncActivation.self)
+                    trampoline.deactivateWithOptions(0) { success, error in
+                        if success {
+                            continuation.resume()
+                        } else {
+                            continuation.resume(throwing: error ?? PlaybackAudioSessionError.deactivationFailed)
+                        }
+                    }
+                    return
                 }
-            }
-        }
-    }
-
-    private static func deactivateAsynchronously(_ session: AVAudioSession) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            let trampoline = unsafeBitCast(session, to: AVAudioSessionAsyncActivation.self)
-            trampoline.deactivateWithOptions(0) { success, error in
-                if success {
-                    continuation.resume()
-                } else {
-                    continuation.resume(throwing: error ?? PlaybackAudioSessionError.deactivationFailed)
-                }
-            }
-        }
-    }
-
-    private static func setActiveOffMainActor(_ active: Bool) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            DispatchQueue.global(qos: .userInitiated).async {
                 do {
-                    try AVAudioSession.sharedInstance().setActive(active)
+                    try session.setActive(false)
                     continuation.resume()
                 } catch {
                     continuation.resume(throwing: error)

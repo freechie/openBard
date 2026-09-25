@@ -16,7 +16,7 @@ nonisolated final class RecordingPlaybackAudioSession: PlaybackAudioSession {
         lock.withLock { recorded }
     }
 
-    func setPlaybackCategory() throws {
+    func setPlaybackCategory() async throws {
         record(.setPlaybackCategory)
     }
 

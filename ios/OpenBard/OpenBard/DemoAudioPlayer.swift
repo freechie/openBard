@@ -31,7 +31,7 @@ final class DemoAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
         let generation = playbackGeneration
         stopKeepingSource()
 
-        try session.setPlaybackCategory()
+        try await session.setPlaybackCategory()
         try await session.activate()
         guard generation == playbackGeneration else { return }
 
@@ -44,8 +44,8 @@ final class DemoAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
             throw error
         }
         audioPlayer.delegate = self
-        audioPlayer.prepareToPlay()
-        guard audioPlayer.play() else {
+        let started = await Self.prepareAndStart(audioPlayer)
+        guard started else {
             await deactivateIfCurrent(generation)
             guard generation == playbackGeneration else { return }
             throw PlaybackError.failedToStart
@@ -115,6 +115,15 @@ final class DemoAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
         let generation = playbackGeneration
         pendingDeactivation = Task { @MainActor in
             await self.deactivateIfCurrent(generation)
+        }
+    }
+
+    nonisolated private static func prepareAndStart(_ audioPlayer: AVAudioPlayer) async -> Bool {
+        await withCheckedContinuation { continuation in
+            PlaybackAudioWork.queue.async {
+                audioPlayer.prepareToPlay()
+                continuation.resume(returning: audioPlayer.play())
+            }
         }
     }
 
