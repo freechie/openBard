@@ -144,8 +144,8 @@ enum ScoreBuilder {
         return slices
     }
 
-    /// Greedy voices: a note joins the lowest-numbered voice that does not overlap
-    /// it, unless the overlap is a chord (same start and same duration).
+    /// A note joins the lowest-numbered voice that does not overlap it, unless
+    /// the overlap is a chord with the same start and duration.
     private static func assignVoices(_ notes: [ScoreNote]) -> [[ScoreNote]] {
         var voices: [[ScoreNote]] = []
         for note in notes {
