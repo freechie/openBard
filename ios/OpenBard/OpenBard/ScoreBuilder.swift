@@ -45,7 +45,7 @@ enum ScoreBuilder {
     static func build(from notes: [NoteEvent], tempoBpm: Double? = nil) -> Score? {
         guard !notes.isEmpty else { return nil }
 
-        let resolvedTempo = tempoBpm.map(clampTempo) ?? estimateTempoBpm(notes)
+        let resolvedTempo = tempoBpm.map { clampTempo($0) } ?? estimateTempoBpm(notes)
         let beatSeconds = 60.0 / resolvedTempo
         let quantized = notes.map { note in
             quantizedNote(note, beatSeconds: beatSeconds)
@@ -215,7 +215,7 @@ enum ScoreBuilder {
         return candidates.min(by: { abs($0 - beats) < abs($1 - beats) }) ?? 4.0
     }
 
-    static func clampTempo(_ bpm: Double) -> Double {
+    nonisolated static func clampTempo(_ bpm: Double) -> Double {
         min(max(bpm, 40), 208)
     }
 }
