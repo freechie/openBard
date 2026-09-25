@@ -17,8 +17,8 @@ final class DemoAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
 
     var canReplay: Bool { lastURL != nil }
 
-    init(session: any PlaybackAudioSession = SystemPlaybackAudioSession()) {
-        self.session = session
+    init(session: (any PlaybackAudioSession)? = nil) {
+        self.session = session ?? SystemPlaybackAudioSession()
         super.init()
     }
 
