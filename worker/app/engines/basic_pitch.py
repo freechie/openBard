@@ -18,6 +18,11 @@ def midi_to_staff_hint(midi: int) -> str:
     return "treble"
 
 
+def amplitude_fields(amplitude: float) -> tuple[float, float]:
+    amp = max(0.0, min(1.0, float(amplitude)))
+    return amp, amp
+
+
 class BasicPitchTranscriber(Transcriber):
     """Spotify Basic Pitch (Apache-2.0) for solo/isolated polyphonic audio."""
 
@@ -96,15 +101,15 @@ class BasicPitchTranscriber(Transcriber):
             duration = float(end_s) - float(start_s)
             if duration <= 0:
                 continue
-            amp = max(0.0, min(1.0, float(amplitude)))
+            velocity, confidence = amplitude_fields(amplitude)
             pitch = int(pitch_midi)
             notes.append(
                 NoteEvent(
                     pitch_midi=pitch,
                     onset_seconds=max(0.0, float(start_s)),
                     duration_seconds=duration,
-                    velocity=amp,
-                    confidence=amp,
+                    velocity=velocity,
+                    confidence=confidence,
                     staff_hint=midi_to_staff_hint(pitch),
                 )
             )
