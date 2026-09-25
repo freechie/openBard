@@ -5,72 +5,72 @@ editable notes, then later into sheet music.
 
 ![openBard piano roll on iOS](docs/ios-piano-roll.jpg)
 
-**Shipped today:** JSON contract, FastAPI worker with live Basic Pitch on
+Shipped today: JSON contract, FastAPI worker with live Basic Pitch on
 upload, blank-first Ableton-style piano roll (Draw, BPM, overview zoom,
 synth Play), ScoreBuilder staff from all notes, MIDI and MusicXML export.
-**Not shipped:** on-device inference, guided recording, app→worker wiring.
-The iOS app edits notes locally; it does not call the worker.
+Not shipped: on-device inference, guided recording, app-to-worker wiring.
+The iOS app edits notes locally. It does not call the worker.
 
 ## Status
 
-**Updated:** 2026-09-11
+Updated: 2026-09-11
 
 ### Next
 
-1. Phase 4: guided recording + on-device Basic Pitch (app still does not call the worker).
-2. Edit polish: multi-select, undo/redo, velocity-lane pin editing, richer overview chrome.
-3. Validate MusicXML in MuseScore; document rhythm/key export limits.
+1. Phase 4: guided recording and on-device Basic Pitch (the app still does not call the worker).
+2. Edit polish: multi-select, undo/redo, velocity-lane pin editing, richer overview UI.
+3. Validate MusicXML in MuseScore. Document rhythm and key export limits.
 
 ### Shipped
 
-#### Phase 0 — Prototype baseline
-- Transcription JSON schema + example (`contracts/`)
+#### Phase 0. Prototype baseline
+- Transcription JSON schema and example (`contracts/`)
 - FastAPI worker: `GET /health`, `GET /v1/transcriptions/demo`, `GET /v1/audio/demo`
-- Fake engine for demo/contract tests
-- SwiftUI app + WAV import-for-playback (reference listen only)
+- Fake engine for demo and contract tests
+- SwiftUI app and WAV import for playback (reference listen only)
 
-#### Phase 1 — Engine decision
-- Fixtures: `isolated-piano.wav`, `mixed-arrangement.wav` + ground truth
-- **Basic Pitch** chosen for publishable MVP (solo/isolated polyphonic)
-- Eval on isolated piano: 100% recall, 0 long spurious notes, ~0.5s latency, Apache-2.0
-- MuScriptor: research only (gated HF weights, CC BY-NC 4.0) — not for App Store without written permission
+#### Phase 1. Engine decision
+- Fixtures: `isolated-piano.wav`, `mixed-arrangement.wav`, and ground truth
+- Basic Pitch chosen for publishable MVP (solo or isolated polyphonic)
+- Eval on isolated piano was 100% recall, 0 long spurious notes, about 0.5s latency, Apache-2.0
+- MuScriptor is research only (gated HF weights, CC BY-NC 4.0). It is not for App Store use without written permission.
 - Artifacts: `fixtures/basic-pitch-eval-results.json`, `scripts/eval_*.py`, `scripts/check_basicpitch_eval.py` in CI
 
-#### Phase 2 / 2b — Piano roll and edit loop
-- `Transcriber` adapter; **`BasicPitchTranscriber`** on `POST /v1/transcriptions` (live inference)
-- Demo GET still fake `dsp_v0`; amplitude mapped to velocity + confidence (no invented 1.0)
-- Contract: optional tempo/key, `onset_uncertainty_seconds`, `basic_pitch` engine enum
-- **Blank-first launch** (`manual` engine, Draw on); Library fixtures optional; New blank resets the roll
-- Ableton-inspired chrome: keyboard gutter, beat grid, velocity lane, transport (BPM default **120**, Play/Stop, Draw)
-- **Clip overview hotspot** — drag/resize visible time window; pinch also zooms time
-- Stable pitch viewport (no reflow under finger); drag move; **L/R edge resize**
-- Split / merge / delete; Play **synthesizes** current note events (not fixture WAV)
-- Worker + iOS unit tests; fixture-backed Basic Pitch recall check in `./scripts/verify`
+#### Phase 2 / 2b. Piano roll and edit loop
+- `Transcriber` adapter. `BasicPitchTranscriber` runs live inference on `POST /v1/transcriptions`.
+- Demo GET still uses fake `dsp_v0`. Amplitude maps to velocity and confidence. The adapter does not invent 1.0.
+- Contract has optional tempo and key, `onset_uncertainty_seconds`, and a `basic_pitch` engine enum.
+- Launch is blank-first (`manual` engine, Draw on). Library fixtures are optional. New blank resets the roll.
+- Ableton-style layout: keyboard gutter, beat grid, velocity lane, transport (BPM default 120, Play/Stop, Draw).
+- The clip overview hotspot drags and resizes the visible time window. Pinch also zooms time.
+- Pitch viewport stays stable (no reflow under a finger). Drag to move. Left and right edges resize.
+- Split, merge, and delete. Play synthesizes the current note events, not the fixture WAV.
+- Worker and iOS unit tests. Fixture-backed Basic Pitch recall check in `./scripts/verify`.
 
-#### Phase 3 — Score + export
-- `ScoreBuilder` from **all notes** (no lock gate); uses transport BPM when set
-- Staff preview on Score workspace as soon as the roll has notes
-- **MIDI export** (Format 0 SMF) via Score workspace ShareLink
-- **MusicXML export** (partwise 3.1) via Score workspace ShareLink
-  - Per-voice measures with `<backup>`; `<chord/>` only for equal durations; dotted/tied `<type>` matches `<duration>`
-  - Limits: C major key only; validate in MuseScore
+#### Phase 3. Score and export
+- `ScoreBuilder` uses all notes (no lock gate) and transport BPM when set.
+- Staff preview on Score workspace as soon as the roll has notes.
+- MIDI export (Format 0 SMF) via Score workspace ShareLink.
+- MusicXML export (partwise 3.1) via Score workspace ShareLink.
+  - Per-voice measures with `<backup>`. `<chord/>` only for equal durations. Dotted and tied `<type>` matches `<duration>`.
+  - C major key only. Validate in MuseScore.
 
 ### Not shipped
 
 | Area | Gap |
 | --- | --- |
-| Export | MuseScore validation notes; richer rhythm/key encoding |
-| iOS ↔ engine | App does **not** call the worker; no on-device Basic Pitch yet |
-| Import | User audio is reference playback only; does not re-transcribe onto the roll |
+| Export | MuseScore validation notes; richer rhythm and key encoding |
+| iOS and engine | The app does not call the worker. No on-device Basic Pitch yet. |
+| Import | User audio is reference playback only. It does not re-transcribe onto the roll. |
 | Recording | No live capture, meters, or guided UX |
 | Edit polish | Undo/redo, multi-select, velocity pins, persist edited JSON |
 | Research | MuScriptor multi-instrument; per-instrument models; larger fixture set |
 
-### Honest limitations
+### Limitations
 
 - Worker live path needs a Basic Pitch backend (CoreML on macOS; TF/TFLite/ONNX elsewhere). `setuptools` pinned `<81` for `resampy` (CI ignores PYSEC-2026-3447).
-- Basic Pitch has no tempo/key; those fields stay null on live POST. App tempo is user-editable (default 120).
-- Precision on isolated piano was ~57% (extra harmonics/phantoms); users edit the roll before trusting Score/export.
+- Basic Pitch has no tempo or key. Those fields stay null on live POST. App tempo is user-editable (default 120).
+- Precision on isolated piano was about 57% (extra harmonics and phantoms). Users edit the roll before trusting Score or export.
 - Staff preview is deterministic for known patterns, not publication-ready engraving.
 - Note playback is a simple sine preview, not a sampled instrument.
 
@@ -96,23 +96,23 @@ tested separately.
 
 ## MVP accuracy plan
 
-1. **Constrain the problem.** Short clips, one clear instrument, guided
-   recording with real-time gain, noise, and clipping meters so the engine
+1. Constrain the problem to short clips of one clear instrument, with guided
+   recording and real-time gain, noise, and clipping meters so the engine
    gets clean input.
 
-2. **Small on-device models per instrument.** Piano, guitar, and strings get
+2. Use small on-device models per instrument. Piano, guitar, and strings get
    their own networks instead of one generic network. Basic Pitch is the MVP
    candidate. An adapter lets you swap or blend models.
 
-3. **Show model output before quantization.** The piano roll shows confidence
+3. Show model output before quantization. The piano roll shows confidence
    scores, onset uncertainty, and possible octave or harmonic flags before any
    ScoreBuilder pass. Users see what the model detected.
 
-4. **Edit, then score.** Start on a blank roll, Draw notes, Play a synth
-   preview, reshape timing on a stable viewport (overview / pinch zoom), then
-   open Score. Fixtures remain optional in Library. No lock step.
+4. Edit, then score. Start on a blank roll, Draw notes, Play a synth
+   preview, reshape timing on a stable viewport with overview or pinch zoom,
+   then open Score. Fixtures remain optional in Library. There is no lock step.
 
-5. **Fixture checks in CI.** Each model change must report recall and
+5. Check fixtures in CI. Each model change must report recall and
    spurious-note rates on known chords and scales. An accuracy drop needs an
    explicit note in the change.
 
@@ -126,7 +126,7 @@ tested separately.
   model (Basic Pitch).
 - Show raw transcription on an unquantized piano roll, including confidence,
   onset uncertainty, and harmonic or octave flags.
-- Draw, split, merge, drag, and resize notes; synth-preview playback.
+- Draw, split, merge, drag, and resize notes. Synth-preview playback.
 - Convert note events into a staff preview with ScoreBuilder.
 - Export MIDI and MusicXML for other notation software.
 - CI checks recall and spurious-note rates on known fixtures.
@@ -199,7 +199,7 @@ A public App Store build requires all of the following:
 ## Repository layout
 
 ```text
-README.md   Product direction + status (shipped / next / gaps)
+README.md   Product direction and status (shipped / next / gaps)
 docs/       Screenshots and other docs assets
 contracts/  Shared JSON schema and example transcription
 fixtures/   Audio fixtures, ground truth, eval results
@@ -253,13 +253,13 @@ without code signing. GitHub Actions runs the same command on `macos-26`.
 open ios/OpenBard/OpenBard.xcodeproj
 ```
 
-Launch is a **blank** piano roll with Draw on and BPM 120. Draw notes, resize
+Launch is a blank piano roll with Draw on and BPM 120. Draw notes, resize
 edges, pinch or use the clip overview to zoom time, Play for a sine synth
-preview, then switch to Score for staff + MIDI/MusicXML export. Library can
+preview, then switch to Score for staff plus MIDI and MusicXML export. Library can
 load fixtures or import audio for reference playback. The app does not call
 the worker.
 
-Quick path: blank roll → Draw notes → Play synth → Score staff → export.
+Quick path: blank roll, Draw notes, Play synth, Score staff, export.
 
 ## License
 

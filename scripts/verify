@@ -14,7 +14,7 @@ repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
   #
   # PYSEC-2026-3447 (setuptools <83 MANIFEST.in NFC/NFD exclude bypass) is
   # fixed in setuptools 83+, but that release drops pkg_resources and breaks
-  # resampy → basic-pitch. Pin stays setuptools>=75,<81. Worker does not build
+  # resampy, which basic-pitch needs. Pin stays setuptools>=75,<81. Worker does not build
   # sdists with setuptools FileList.
   uvx --from pip-audit pip-audit --path .venv/lib/python3.11/site-packages \
     --ignore-vuln PYSEC-2026-1805 \
@@ -22,7 +22,7 @@ repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
   uvx bandit -q -r app
 )
 
-echo "✓ Worker tests passed"
+echo "Worker tests passed"
 echo ""
 echo "Verifying Basic Pitch eval results against acceptance criteria..."
 python3 "$repo_root/scripts/check_basicpitch_eval.py"

@@ -19,7 +19,6 @@ enum NoteAudioRenderer {
         notes.map { $0.onsetSeconds + max($0.durationSeconds, 0.05) }.max() ?? 0
     }
 
-    /// Build a mono 16-bit PCM WAV for the given notes (wall-clock timing).
     static func makeWAVData(from notes: [NoteEvent]) throws -> Data {
         guard !notes.isEmpty else { throw RenderError.noNotes }
 
@@ -52,7 +51,6 @@ enum NoteAudioRenderer {
             }
         }
 
-        // Soft clip
         for i in samples.indices {
             let x = samples[i]
             samples[i] = max(-1, min(1, x))
