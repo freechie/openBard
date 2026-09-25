@@ -7,28 +7,52 @@ final class DemoAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published var isPlaying = false
     @Published var sourceName = "Blank"
 
-    private var player: AVAudioPlayer?
+    private let session: any PlaybackAudioSession
+    private var playbackGeneration: UInt64 = 0
+    private var pendingDeactivation: Task<Void, Never>?
+    private(set) var player: AVAudioPlayer?
     private var lastURL: URL?
     private var lastName: String?
     private var notesTempURL: URL?
 
     var canReplay: Bool { lastURL != nil }
 
-    func playDemo(from bundle: Bundle = .main) throws {
-        try play(url: TranscriptionLoader.demoAudioURL(from: bundle), name: "c-major-chord.wav")
+    init(session: (any PlaybackAudioSession)? = nil) {
+        self.session = session ?? SystemPlaybackAudioSession()
+        super.init()
     }
 
-    func play(url: URL, name: String) throws {
-        stopKeepingSource()
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playback)
-        try session.setActive(true)
+    func playDemo(from bundle: Bundle = .main) async throws {
+        try await play(url: TranscriptionLoader.demoAudioURL(from: bundle), name: "c-major-chord.wav")
+    }
 
-        let audioPlayer = try AVAudioPlayer(contentsOf: url)
+    func play(url: URL, name: String) async throws {
+        playbackGeneration += 1
+        let generation = playbackGeneration
+        stopKeepingSource()
+
+        try await session.setPlaybackCategory()
+        try await session.activate()
+        guard generation == playbackGeneration else { return }
+
+        let audioPlayer: AVAudioPlayer
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: url)
+        } catch {
+            await deactivateIfCurrent(generation)
+            guard generation == playbackGeneration else { return }
+            throw error
+        }
         audioPlayer.delegate = self
-        audioPlayer.prepareToPlay()
-        guard audioPlayer.play() else {
+        let started = await Self.prepareAndStart(audioPlayer)
+        guard started else {
+            await deactivateIfCurrent(generation)
+            guard generation == playbackGeneration else { return }
             throw PlaybackError.failedToStart
+        }
+        guard generation == playbackGeneration else {
+            audioPlayer.stop()
+            return
         }
 
         player = audioPlayer
@@ -38,7 +62,7 @@ final class DemoAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
         isPlaying = true
     }
 
-    func playNotes(_ notes: [NoteEvent], name: String = "Notes") throws {
+    func playNotes(_ notes: [NoteEvent], name: String = "Notes") async throws {
         let wav = try NoteAudioRenderer.makeWAVData(from: notes)
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("openbard-notes-\(UUID().uuidString).wav")
@@ -47,24 +71,29 @@ final class DemoAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
             try? FileManager.default.removeItem(at: previous)
         }
         notesTempURL = url
-        try play(url: url, name: name)
+        try await play(url: url, name: name)
     }
 
     /// Replay the last loaded audio without changing note events.
-    func replay() throws {
+    func replay() async throws {
         guard let url = lastURL, let name = lastName else {
             throw PlaybackError.noSource
         }
-        try play(url: url, name: name)
+        try await play(url: url, name: name)
     }
 
     func stop() {
+        playbackGeneration += 1
         stopKeepingSource()
+        let generation = playbackGeneration
+        pendingDeactivation = Task { @MainActor in
+            await self.deactivateIfCurrent(generation)
+        }
     }
 
     /// Clear association so Play must pick a fixture/import again (blank roll).
     func clearSource(name: String = "Blank") {
-        stopKeepingSource()
+        stop()
         lastURL = nil
         lastName = nil
         sourceName = name
@@ -74,15 +103,44 @@ final class DemoAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
         }
     }
 
+    func awaitPendingDeactivation() async {
+        await pendingDeactivation?.value
+    }
+
+    func handlePlaybackFinished(_ finished: AVAudioPlayer) {
+        guard player === finished else { return }
+        playbackGeneration += 1
+        player = nil
+        isPlaying = false
+        let generation = playbackGeneration
+        pendingDeactivation = Task { @MainActor in
+            await self.deactivateIfCurrent(generation)
+        }
+    }
+
+    nonisolated private static func prepareAndStart(_ audioPlayer: AVAudioPlayer) async -> Bool {
+        await withCheckedContinuation { continuation in
+            PlaybackAudioWork.queue.async {
+                audioPlayer.prepareToPlay()
+                continuation.resume(returning: audioPlayer.play())
+            }
+        }
+    }
+
     private func stopKeepingSource() {
         player?.stop()
         player = nil
         isPlaying = false
     }
 
-    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+    private func deactivateIfCurrent(_ generation: UInt64) async {
+        guard generation == playbackGeneration, player == nil, !isPlaying else { return }
+        await session.deactivate()
+    }
+
+    nonisolated func audioPlayerDidFinishPlaying(_ finished: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
-            self.isPlaying = false
+            self.handlePlaybackFinished(finished)
         }
     }
 
