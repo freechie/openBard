@@ -9,6 +9,15 @@ struct Score: Equatable {
 
 struct ScoreMeasure: Equatable {
     var index: Int
+    var voices: [ScoreVoice]
+
+    var items: [ScoreItem] {
+        voices.flatMap(\.items)
+    }
+}
+
+struct ScoreVoice: Equatable {
+    var number: Int
     var items: [ScoreItem]
 }
 
@@ -95,8 +104,18 @@ enum ScoreBuilder {
                     if lhs.startBeat != rhs.startBeat { return lhs.startBeat < rhs.startBeat }
                     return lhs.pitchMidi < rhs.pitchMidi
                 }
-            let items = insertRests(notes: inMeasure, origin: origin)
-            return ScoreMeasure(index: index, items: items)
+            let voices = assignVoices(inMeasure).enumerated().map { offset, voiceNotes in
+                ScoreVoice(
+                    number: offset + 1,
+                    items: insertRests(notes: voiceNotes, origin: origin)
+                )
+            }
+            return ScoreMeasure(
+                index: index,
+                voices: voices.isEmpty
+                    ? [ScoreVoice(number: 1, items: insertRests(notes: [], origin: origin))]
+                    : voices
+            )
         }
     }
 
@@ -123,6 +142,38 @@ enum ScoreBuilder {
         }
 
         return slices
+    }
+
+    /// Greedy voices: a note joins the lowest-numbered voice that does not overlap
+    /// it, unless the overlap is a chord (same start and same duration).
+    private static func assignVoices(_ notes: [ScoreNote]) -> [[ScoreNote]] {
+        var voices: [[ScoreNote]] = []
+        for note in notes {
+            if let index = voices.firstIndex(where: { canPlace(note, in: $0) }) {
+                voices[index].append(note)
+            } else {
+                voices.append([note])
+            }
+        }
+        return voices
+    }
+
+    private static func canPlace(_ note: ScoreNote, in voice: [ScoreNote]) -> Bool {
+        for existing in voice {
+            let sameStart = abs(existing.startBeat - note.startBeat) < 1e-9
+            let sameDuration = abs(existing.durationBeats - note.durationBeats) < 1e-9
+            if sameStart && sameDuration {
+                continue
+            }
+            let existingEnd = existing.startBeat + existing.durationBeats
+            let noteEnd = note.startBeat + note.durationBeats
+            let overlaps = note.startBeat < existingEnd - 1e-9
+                && existing.startBeat < noteEnd - 1e-9
+            if overlaps {
+                return false
+            }
+        }
+        return true
     }
 
     private static func insertRests(notes: [ScoreNote], origin: Double) -> [ScoreItem] {
