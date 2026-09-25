@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""Linux check for tempo-null load: one BPM for roll, score, MIDI, and the first plus tap.
-
-Ports ScoreBuilder.estimateTempoBpm / clampTempo and ContentView's UI default and
-adjustTempo. Linux has no Swift toolchain, so this locks the arithmetic. The Swift
-tests lock TranscriptionLoader.loadFixture.
-"""
 
 from __future__ import annotations
 
