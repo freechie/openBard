@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from importlib import metadata
 from pathlib import Path
 
-import httpx
+import httpx2 as httpx
 import pytest
 import uvicorn
 
