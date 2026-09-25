@@ -3,27 +3,30 @@ import Foundation
 
 /// Session calls used by demo playback. Injected so tests can record activate/deactivate
 /// without touching `AVAudioSession`.
-protocol PlaybackAudioSession: AnyObject {
+nonisolated protocol PlaybackAudioSession: AnyObject {
     func setPlaybackCategory() throws
     func activate() async throws
     func deactivate() async
 }
 
-enum PlaybackAudioSessionError: Error {
+nonisolated enum PlaybackAudioSessionError: Error {
     case activationFailed
     case deactivationFailed
 }
 
+private let activateWithOptionsSelector = NSSelectorFromString("activateWithOptions:completionHandler:")
+private let deactivateWithOptionsSelector = NSSelectorFromString("deactivateWithOptions:completionHandler:")
+
 /// Live `AVAudioSession` wrapper. Uses the asynchronous activate/deactivate API when
 /// the running OS implements it; otherwise hops synchronous `setActive` off the main actor.
-final class SystemPlaybackAudioSession: PlaybackAudioSession {
+nonisolated final class SystemPlaybackAudioSession: PlaybackAudioSession {
     func setPlaybackCategory() throws {
         try AVAudioSession.sharedInstance().setCategory(.playback)
     }
 
     func activate() async throws {
         let session = AVAudioSession.sharedInstance()
-        if session.responds(to: AVAudioSessionAsyncActivation.activateSelector) {
+        if session.responds(to: activateWithOptionsSelector) {
             try await Self.activateAsynchronously(session)
             return
         }
@@ -32,7 +35,7 @@ final class SystemPlaybackAudioSession: PlaybackAudioSession {
 
     func deactivate() async {
         let session = AVAudioSession.sharedInstance()
-        if session.responds(to: AVAudioSessionAsyncActivation.deactivateSelector) {
+        if session.responds(to: deactivateWithOptionsSelector) {
             try? await Self.deactivateAsynchronously(session)
             return
         }
@@ -94,14 +97,4 @@ final class SystemPlaybackAudioSession: PlaybackAudioSession {
         _ options: UInt,
         completionHandler: @escaping (Bool, NSError?) -> Void
     )
-}
-
-private extension AVAudioSessionAsyncActivation {
-    static var activateSelector: Selector {
-        #selector(activateWithOptions(_:completionHandler:))
-    }
-
-    static var deactivateSelector: Selector {
-        #selector(deactivateWithOptions(_:completionHandler:))
-    }
 }
