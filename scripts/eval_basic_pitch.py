@@ -9,11 +9,21 @@ Measures:
 - Memory usage
 """
 import json
+import sys
 import time
 from pathlib import Path
 from typing import Any
 
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT / "worker") not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT / "worker"))
+
+from app.engines.basic_pitch import amplitude_fields
 
 
 def load_ground_truth(path: Path) -> dict[str, Any]:
@@ -28,6 +38,21 @@ def midi_to_note_name(midi: int) -> str:
     octave = (midi // 12) - 1
     note = notes[midi % 12]
     return f"{note}{octave}"
+
+
+def predicted_notes_from_events(note_events: list) -> list[dict[str, Any]]:
+    predicted_notes = []
+    for event in note_events:
+        start_time_sec, end_time_sec, pitch_midi, amplitude = event[0], event[1], event[2], event[3]
+        velocity, confidence = amplitude_fields(amplitude)
+        predicted_notes.append({
+            "pitch_midi": int(pitch_midi),
+            "onset_seconds": float(start_time_sec),
+            "duration_seconds": float(end_time_sec - start_time_sec),
+            "velocity": velocity,
+            "confidence": confidence,
+        })
+    return predicted_notes
 
 
 def evaluate_transcription(
@@ -161,6 +186,9 @@ def main() -> None:
         return
     
     # Measure memory before transcription
+    if psutil is None:
+        print("ERROR: psutil is not installed.")
+        return
     process = psutil.Process()
     mem_before = process.memory_info().rss / 1024 / 1024  # MB
     
@@ -179,16 +207,7 @@ def main() -> None:
     print(f"  Memory usage: {mem_after:.1f} MB (Δ {mem_delta:+.1f} MB)")
     print()
     
-    # Convert Basic Pitch note_events to our format
-    predicted_notes = []
-    for start_time_sec, end_time_sec, pitch_midi, velocity, _ in note_events:
-        predicted_notes.append({
-            "pitch_midi": int(pitch_midi),
-            "onset_seconds": float(start_time_sec),
-            "duration_seconds": float(end_time_sec - start_time_sec),
-            "velocity": float(velocity) / 127.0,  # Normalize to [0, 1]
-            "confidence": 1.0,  # Basic Pitch doesn't provide confidence per note
-        })
+    predicted_notes = predicted_notes_from_events(note_events)
     
     print(f"Basic Pitch detected {len(predicted_notes)} notes")
     print()
