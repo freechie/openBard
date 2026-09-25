@@ -15,6 +15,8 @@ struct ContentView: View {
     @State private var pianoRollViewport: PianoRollViewport = .blank
     @State private var timeWindow: PianoRollTimeWindow = .blank()
     @State private var isDrawMode = true
+    @State private var isTranscribing = false
+    @AppStorage(WorkerSettings.storageKey) private var workerBaseURLString = WorkerSettings.defaultBaseURLString
 
     init() {
         _transcription = State(initialValue: TranscriptionResult(
@@ -82,11 +84,7 @@ struct ContentView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
-            if let playbackError {
-                Text(playbackError)
-                    .font(.footnote)
-                    .foregroundColor(theme.danger)
-            }
+            statusFooter
         }
         .animation(.easeInOut(duration: 0.2), value: isLibraryMenuExpanded)
     }
@@ -109,13 +107,24 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .layoutPriority(1)
 
-            if let playbackError {
-                Text(playbackError)
-                    .font(.footnote)
-                    .foregroundColor(theme.danger)
-            }
+            statusFooter
         }
         .animation(.easeInOut(duration: 0.2), value: isLibraryMenuExpanded)
+    }
+
+    @ViewBuilder
+    private var statusFooter: some View {
+        if isTranscribing {
+            Text("Transcribing...")
+                .font(.footnote)
+                .foregroundColor(theme.textSecondary)
+                .accessibilityIdentifier("transcribe-status")
+        } else if let playbackError {
+            Text(playbackError)
+                .font(.footnote)
+                .foregroundColor(theme.danger)
+                .accessibilityIdentifier("import-error")
+        }
     }
 
     private func topBar(_ transcription: TranscriptionResult) -> some View {
@@ -178,13 +187,37 @@ struct ContentView: View {
                 audioPlayer.stop()
                 isImporterPresented = true
             } label: {
-                Label("Import audio", systemImage: "square.and.arrow.down")
+                Label(isTranscribing ? "Transcribing..." : "Import audio", systemImage: "square.and.arrow.down")
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 44)
             }
             .buttonStyle(.bordered)
             .tint(theme.accent)
+            .disabled(isTranscribing)
             .accessibilityIdentifier("import-audio")
+
+            Text("Worker URL")
+                .font(.caption)
+                .foregroundColor(theme.textSecondary)
+
+            TextField(WorkerSettings.defaultBaseURLString, text: $workerBaseURLString)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(.URL)
+                .textFieldStyle(.plain)
+                .font(.footnote)
+                .padding(8)
+                .background(theme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(theme.border, lineWidth: 1)
+                )
+                .accessibilityIdentifier("worker-base-url")
+
+            Text("Simulator default is \(WorkerSettings.defaultBaseURLString)")
+                .font(.caption2)
+                .foregroundColor(theme.textSecondary)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -531,17 +564,23 @@ struct ContentView: View {
             } else {
                 loaded = try TranscriptionLoader.loadDemo()
             }
-            transcription = loaded
-            let seeded = PianoRollViewport.seeded(
-                from: loaded.noteEvents,
-                tempoBpm: loaded.tempoBpm
-            )
-            pianoRollViewport = seeded
-            timeWindow = .from(contentSeconds: seeded.timelineSeconds, tempoBpm: loaded.tempoBpm)
+            presentTranscription(loaded, drawMode: false)
             audioPlayer.clearSource(name: "\(fixture.rawValue) notes")
         } catch {
             playbackError = "Could not load fixture: \(fixture.rawValue)"
         }
+    }
+
+    private func presentTranscription(_ loaded: TranscriptionResult, drawMode: Bool) {
+        selectedNoteIndex = nil
+        isDrawMode = drawMode
+        transcription = loaded
+        let seeded = PianoRollViewport.seeded(
+            from: loaded.noteEvents,
+            tempoBpm: loaded.tempoBpm
+        )
+        pianoRollViewport = seeded
+        timeWindow = .from(contentSeconds: seeded.timelineSeconds, tempoBpm: loaded.tempoBpm)
     }
 
     private func createBlankRoll() {
@@ -613,16 +652,38 @@ struct ContentView: View {
             let destination = FileManager.default.temporaryDirectory
                 .appendingPathComponent("openbard-import-\(UUID().uuidString)-\(url.lastPathComponent)")
             try FileManager.default.copyItem(at: url, to: destination)
-            let importedName = url.lastPathComponent
-            Task {
+            transcribeImportedAudio(at: destination, name: url.lastPathComponent)
+        } catch {
+            playbackError = "Could not import audio"
+        }
+    }
+
+    private func transcribeImportedAudio(at fileURL: URL, name: String) {
+        isTranscribing = true
+        playbackError = nil
+        audioPlayer.stop()
+        Task {
+            defer { isTranscribing = false }
+            do {
+                let baseURL = try WorkerSettings.baseURL(from: workerBaseURLString)
+                let data = try await WorkerClient.transcribe(fileURL: fileURL, baseURL: baseURL)
+                let loaded: TranscriptionResult
                 do {
-                    try await audioPlayer.play(url: destination, name: importedName)
+                    loaded = try TranscriptionLoader.decodeTranscription(from: data)
+                } catch {
+                    throw WorkerError.invalidTranscription
+                }
+                presentTranscription(loaded, drawMode: false)
+                do {
+                    try await audioPlayer.play(url: fileURL, name: name)
                 } catch {
                     playbackError = "Could not play imported audio"
                 }
+            } catch let error as WorkerError {
+                playbackError = error.localizedDescription
+            } catch {
+                playbackError = "Could not import audio"
             }
-        } catch {
-            playbackError = "Could not play imported audio"
         }
     }
 

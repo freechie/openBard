@@ -37,7 +37,7 @@ enum TranscriptionLoader {
         return filled
     }
 
-    private static func decodeTranscription(from data: Data) throws -> TranscriptionResult {
+    static func decodeTranscription(from data: Data) throws -> TranscriptionResult {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return resolvingMissingTempo(try decoder.decode(TranscriptionResult.self, from: data))
