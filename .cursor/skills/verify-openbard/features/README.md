@@ -23,7 +23,7 @@ This map does not cover the iOS piano-roll app.
 
 ## Proof and skip reporting
 
-- Capture the request line and the response body, not only the final status code.
+- Capture the request line and the response body. The status code alone is not proof.
 - JSON proof includes `status.txt` and `body.json`.
 - WAV proof includes `headers.txt` and `body.wav`, compared to `fixtures/c-major-chord.wav`.
 - Record the feature ID and `--save` name with every artifact.

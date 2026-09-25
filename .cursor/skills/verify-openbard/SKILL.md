@@ -7,7 +7,7 @@ description: Drive the openBard FastAPI worker over HTTP on 127.0.0.1 (GET /heal
 
 openBard ships an iOS piano-roll editor and a FastAPI worker. The iOS app loads bundled JSON. It does not call the worker. This skill drives the worker over HTTP, which is the path an agent can launch on Linux and in local Python. On macOS, `./scripts/verify` still compiles iOS. It does not launch Simulator.
 
-Read `features/README.md` before a drive. Drive from that map. Hitting an extra endpoint does not cover a mapped feature you skipped.
+Read `features/README.md` before a drive. Drive only the features in that map. Hitting an extra endpoint does not cover a mapped feature you skipped.
 
 ## Launch
 
@@ -25,7 +25,7 @@ Needs Python 3.11 via uv, `uv sync --frozen` in `worker/`, and `curl`. `worker/.
 
 Ready when `GET http://127.0.0.1:18765/health` returns exactly `{"status":"ok"}`. The log at `/tmp/openbard-verify-run-$OPENBARD_VERIFY_RUN_ID/uvicorn.log` contains `Uvicorn running on http://127.0.0.1:18765`. Launch prints `url=`, `pid=`, and `log=`.
 
-`load_model` runs in FastAPI lifespan before those checks pass. TensorFlow init can take several seconds. That is startup, not the first POST.
+FastAPI lifespan calls `load_model` before `/health` returns ok. TensorFlow init can take several seconds during that wait. The first POST does not load TensorFlow.
 
 Do not use `uv run uvicorn --reload` for verification. The helper starts `worker/.venv/bin/uvicorn app.main:app` so the stored PID owns the listen socket. README's `--reload` command is for humans editing code.
 
@@ -73,9 +73,9 @@ Use these HTTP paths.
 - `POST /v1/transcriptions` with form field `audio`
 - Allowed upload suffixes `.wav`, `.mp3`, `.m4a`, `.caf`, `.aac`
 
-Recipes live in `features/`. Capture the request and the resulting body. After a mutation-style POST, read the JSON fields. Do not trust a 200 with an empty `note_events` list for the C major fixture.
+Recipes live in `features/`. Capture the request and the resulting body. After `POST /v1/transcriptions`, read the JSON fields. Do not trust a 200 with an empty `note_events` list for the C major fixture.
 
-Startup already loaded the model. The first `POST /v1/transcriptions` can still take several seconds for inference. Wait for HTTP 200. The helper curl timeout is 120 seconds. Do not treat a slow first call as a hang. Later POSTs reuse the loaded model.
+The worker already loaded the model at startup. The first `POST /v1/transcriptions` can still take several seconds for inference. Wait for HTTP 200. The helper curl timeout is 120 seconds. Do not treat a slow first call as a hang. Later POSTs reuse the loaded model.
 
 `GET /docs` is FastAPI Swagger. It is not an openBard product screen. Do not use it as proof of a mapped feature.
 
@@ -87,7 +87,7 @@ Set `OPENBARD_VERIFY_EVIDENCE_DIR` to a directory that must survive cleanup. Def
 
 Proof standards:
 
-- Exercise the HTTP path a user of the worker uses. That is curl against the live server, not `TestClient` and not a private Python call into `BasicPitchTranscriber`.
+- Exercise the HTTP path a user of the worker uses. Use curl against the live server. Do not use `TestClient` or a private Python call into `BasicPitchTranscriber`.
 - Keep the request line and the response body. A screenshot of `/docs` is not enough.
 - For `POST /v1/transcriptions` on `fixtures/c-major-chord.wav`, require `engine` `basic_pitch`, `tempo_bpm` JSON null, `key_guess` JSON null, and `pitch_midi` values `[60, 64, 67]` when sorted. Each note's `confidence` equals its `velocity`.
 - For `GET /v1/audio/demo`, require `Content-Type` `audio/wav`, filename `c-major-chord.wav`, and body bytes equal to `fixtures/c-major-chord.wav`.
