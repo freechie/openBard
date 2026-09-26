@@ -299,10 +299,14 @@ struct ContentView: View {
                     .font(.system(.title3, design: .monospaced))
                     .bold()
                     .foregroundColor(theme.textPrimary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                     .accessibilityIdentifier("tempo-bpm")
                 Text("BPM")
                     .font(.caption)
                     .foregroundColor(theme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
 
                 Button {
                     adjustTempo(by: -1)
