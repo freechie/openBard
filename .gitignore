@@ -329,7 +329,6 @@ iOSInjectionProject/
 Session.vim
 .nvim.lua
 
-# Cursor local files. Keep project skills in git so agents can load them.
+# Cursor agent guidance stays local and is not published.
 .cursor/*
-!.cursor/skills/
-!.cursor/skills/**
+.cursor/skills/
