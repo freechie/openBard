@@ -78,6 +78,8 @@ def _install_stub(monkeypatch: pytest.MonkeyPatch, sleep_s: float) -> dict[str, 
     monkeypatch.setattr("app.engines.basic_pitch.version", version)
     if hasattr(main_module._transcriber, "_model"):
         main_module._transcriber._model = None
+    if hasattr(main_module._transcriber, "_engine_version"):
+        main_module._transcriber._engine_version = None
     return state
 
 

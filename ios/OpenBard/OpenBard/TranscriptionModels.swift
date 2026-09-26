@@ -1,6 +1,6 @@
 import Foundation
 
-struct TranscriptionResult: Decodable {
+struct TranscriptionResult: Decodable, Sendable {
     let engine: String
     let engineVersion: String
     var tempoBpm: Double?
@@ -8,7 +8,7 @@ struct TranscriptionResult: Decodable {
     var noteEvents: [NoteEvent]
 }
 
-struct NoteEvent: Decodable, Identifiable {
+struct NoteEvent: Decodable, Identifiable, Sendable {
     var pitchMidi: Int
     var onsetSeconds: Double
     var durationSeconds: Double
@@ -38,7 +38,7 @@ struct NoteEvent: Decodable, Identifiable {
     }
 }
 
-enum StaffHint: String, Decodable {
+enum StaffHint: String, Decodable, Sendable {
     case treble
     case bass
     case unknown

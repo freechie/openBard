@@ -32,28 +32,29 @@ enum MusicXMLExporter {
         guard !score.measures.isEmpty else { throw MusicXMLExportError.noScore }
 
         let tieStops = tieStopKeys(in: score)
-        var xml = ""
-        xml += #"<?xml version="1.0" encoding="UTF-8"?>"# + "\n"
-        xml += #"<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">"# + "\n"
-        xml += #"<score-partwise version="3.1">"# + "\n"
-        xml += "  <work>\n"
-        xml += "    <work-title>openBard</work-title>\n"
-        xml += "  </work>\n"
-        xml += "  <part-list>\n"
-        xml += #"    <score-part id="P1">"# + "\n"
-        xml += "      <part-name>Music</part-name>\n"
-        xml += "    </score-part>\n"
-        xml += "  </part-list>\n"
-        xml += #"  <part id="P1">"# + "\n"
+        var parts: [String] = []
+        parts.reserveCapacity(score.measures.count + 12)
+        parts.append(#"<?xml version="1.0" encoding="UTF-8"?>"# + "\n")
+        parts.append(#"<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">"# + "\n")
+        parts.append(#"<score-partwise version="3.1">"# + "\n")
+        parts.append("  <work>\n")
+        parts.append("    <work-title>openBard</work-title>\n")
+        parts.append("  </work>\n")
+        parts.append("  <part-list>\n")
+        parts.append(#"    <score-part id="P1">"# + "\n")
+        parts.append("      <part-name>Music</part-name>\n")
+        parts.append("    </score-part>\n")
+        parts.append("  </part-list>\n")
+        parts.append(#"  <part id="P1">"# + "\n")
 
         for measure in score.measures {
-            xml += emitMeasure(measure, score: score, tieStops: tieStops, isFirst: measure.index == 0)
+            parts.append(emitMeasure(measure, score: score, tieStops: tieStops, isFirst: measure.index == 0))
         }
 
-        xml += "  </part>\n"
-        xml += "</score-partwise>\n"
+        parts.append("  </part>\n")
+        parts.append("</score-partwise>\n")
 
-        guard let data = xml.data(using: .utf8) else { throw MusicXMLExportError.noScore }
+        guard let data = parts.joined().data(using: .utf8) else { throw MusicXMLExportError.noScore }
         return data
     }
 

@@ -17,7 +17,8 @@ struct PianoRollOverview: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
+        let bounds = pitchBounds
+        return GeometryReader { geo in
             let width = max(geo.size.width, 1)
             let height = geo.size.height
             let content = max(timeWindow.contentSeconds, 0.001)
@@ -30,7 +31,13 @@ struct PianoRollOverview: View {
 
                 Canvas { context, size in
                     drawBars(context: context, size: size, content: content, tempo: tempoBpm)
-                    drawNotes(context: context, size: size, content: content)
+                    drawNotes(
+                        context: context,
+                        size: size,
+                        content: content,
+                        minPitch: bounds.min,
+                        maxPitch: bounds.max
+                    )
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 4))
 
@@ -140,17 +147,33 @@ struct PianoRollOverview: View {
         }
     }
 
-    private func drawNotes(context: GraphicsContext, size: CGSize, content: Double) {
+    private var pitchBounds: (min: Int, max: Int) {
+        var minPitch = Int.max
+        var maxPitch = Int.min
+        for note in notes {
+            minPitch = min(minPitch, note.pitchMidi)
+            maxPitch = max(maxPitch, note.pitchMidi)
+        }
+        if minPitch == Int.max {
+            return (48, 72)
+        }
+        return (minPitch, max(maxPitch, minPitch + 1))
+    }
+
+    private func drawNotes(
+        context: GraphicsContext,
+        size: CGSize,
+        content: Double,
+        minPitch: Int,
+        maxPitch: Int
+    ) {
         guard !notes.isEmpty else { return }
-        let pitches = notes.map(\.pitchMidi)
-        let minP = pitches.min() ?? 48
-        let maxP = max(pitches.max() ?? 72, minP + 1)
-        let span = CGFloat(maxP - minP)
+        let span = CGFloat(maxPitch - minPitch)
 
         for note in notes {
             let x = CGFloat(note.onsetSeconds / content) * size.width
             let w = max(CGFloat(note.durationSeconds / content) * size.width, 2)
-            let yNorm = CGFloat(maxP - note.pitchMidi) / span
+            let yNorm = CGFloat(maxPitch - note.pitchMidi) / span
             let y = 4 + yNorm * (size.height - 10)
             let rect = CGRect(x: x, y: y, width: w, height: 3)
             context.fill(Path(roundedRect: rect, cornerRadius: 1), with: .color(theme.accent.opacity(0.85)))
