@@ -29,11 +29,20 @@ enum NoteHelpers {
         return (firstNote, secondNote)
     }
 
+    private static let mergeTouchToleranceSeconds = 0.05
+
+    private static func notesTouch(_ note: NoteEvent, _ other: NoteEvent) -> Bool {
+        let noteEnd = note.onsetSeconds + note.durationSeconds
+        let otherEnd = other.onsetSeconds + other.durationSeconds
+        return abs(other.onsetSeconds - noteEnd) < mergeTouchToleranceSeconds
+            || abs(note.onsetSeconds - otherEnd) < mergeTouchToleranceSeconds
+    }
+
     static func findMergeCandidate(for note: NoteEvent, in notes: [NoteEvent], currentIndex: Int) -> Int? {
-        return notes.enumerated().first { otherIndex, otherNote in
-            otherIndex != currentIndex &&
-            otherNote.pitchMidi == note.pitchMidi &&
-            abs(otherNote.onsetSeconds - (note.onsetSeconds + note.durationSeconds)) < 0.05
+        notes.enumerated().first { otherIndex, otherNote in
+            otherIndex != currentIndex
+                && otherNote.pitchMidi == note.pitchMidi
+                && notesTouch(note, otherNote)
         }?.offset
     }
 
