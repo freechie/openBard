@@ -45,35 +45,29 @@ struct ContentView: View {
     }
 
     var body: some View {
-        GeometryReader { proxy in
-            let canvas = proxy.size
-            ZStack {
-                Group {
-                    if let transcription {
-                        editorBody(transcription)
-                    } else {
-                        Text("Failed to create blank roll")
-                            .foregroundColor(theme.danger)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                }
-                .frame(width: canvas.width, height: canvas.height)
-
-                if isLibraryMenuExpanded {
-                    libraryWindow
-                        .frame(width: canvas.width, height: canvas.height)
-                }
+        Group {
+            if let transcription {
+                editorBody(transcription)
+            } else {
+                Text("Failed to create blank roll")
+                    .foregroundColor(theme.danger)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
         .background(theme.background)
         .foregroundColor(theme.textPrimary)
-        .fileImporter(
-            isPresented: $isImporterPresented,
-            allowedContentTypes: [.audio, .wav, .mpeg4Audio, .mp3],
-            allowsMultipleSelection: false
-        ) { result in
-            importAudio(result)
+        .fullScreenCover(isPresented: $isLibraryMenuExpanded) {
+            libraryWindow
+                .presentationBackground(.clear)
+                .fileImporter(
+                    isPresented: $isImporterPresented,
+                    allowedContentTypes: [.audio, .wav, .mpeg4Audio, .mp3],
+                    allowsMultipleSelection: false
+                ) { result in
+                    importAudio(result)
+                }
         }
     }
 
@@ -208,7 +202,7 @@ struct ContentView: View {
         .accessibilityIdentifier("library-menu")
     }
 
-    /// Same size as the editor underneath. The card is centered in that rect and does not join the roll's stack.
+    /// Overlay content is not part of the editor's height, so the roll keeps the size it has when this is hidden.
     private var libraryWindow: some View {
         ZStack {
             Color.black.opacity(0.28)
@@ -221,9 +215,11 @@ struct ContentView: View {
 
             libraryMenu
                 .frame(maxWidth: 420)
+                .fixedSize(horizontal: false, vertical: true)
                 .shadow(color: Color.black.opacity(0.35), radius: 24, x: 0, y: 10)
                 .padding(24)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityAddTraits(.isModal)
     }
 
