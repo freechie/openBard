@@ -360,15 +360,40 @@ struct OpenBardTests {
         #expect(hit(width: 80, localX: 79, edgeWidth: PianoRollEdit.overviewResizeEdgeWidth) == .right)
     }
     
-    @Test func findsMergeCandidate() {
+    @Test func findsMergeCandidateInBothDirections() {
+        let earlier = NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 1.0, velocity: 0.8, confidence: 0.9, staffHint: .treble)
+        let later = NoteEvent(pitchMidi: 60, onsetSeconds: 1.0, durationSeconds: 1.0, velocity: 0.7, confidence: 0.85, staffHint: .treble)
+        let otherPitch = NoteEvent(pitchMidi: 64, onsetSeconds: 0, durationSeconds: 1.0, velocity: 0.8, confidence: 0.9, staffHint: .treble)
+        let notes = [earlier, later, otherPitch]
+
+        #expect(NoteHelpers.findMergeCandidate(for: notes[0], in: notes, currentIndex: 0) == 1)
+        #expect(NoteHelpers.findMergeCandidate(for: notes[1], in: notes, currentIndex: 1) == 0)
+        #expect(NoteHelpers.findMergeCandidate(for: notes[2], in: notes, currentIndex: 2) == nil)
+
+        let reversed = [later, earlier]
+        #expect(NoteHelpers.findMergeCandidate(for: reversed[0], in: reversed, currentIndex: 0) == 1)
+        #expect(NoteHelpers.findMergeCandidate(for: reversed[1], in: reversed, currentIndex: 1) == 0)
+
+        let forward = NoteHelpers.mergeNotes(earlier, later)
+        let backward = NoteHelpers.mergeNotes(later, earlier)
+        #expect(forward != nil)
+        #expect(backward != nil)
+        #expect(forward?.onsetSeconds == 0)
+        #expect(forward?.durationSeconds == 2.0)
+        #expect(backward?.onsetSeconds == 0)
+        #expect(backward?.durationSeconds == 2.0)
+        #expect(forward?.velocity == 0.8)
+        #expect(backward?.velocity == 0.8)
+    }
+
+    @Test func doesNotFindMergeCandidateWhenNotesDoNotTouch() {
         let notes = [
             NoteEvent(pitchMidi: 60, onsetSeconds: 0, durationSeconds: 1.0, velocity: 0.8, confidence: 0.9, staffHint: .treble),
-            NoteEvent(pitchMidi: 60, onsetSeconds: 1.0, durationSeconds: 1.0, velocity: 0.8, confidence: 0.9, staffHint: .treble),
-            NoteEvent(pitchMidi: 64, onsetSeconds: 0, durationSeconds: 1.0, velocity: 0.8, confidence: 0.9, staffHint: .treble)
+            NoteEvent(pitchMidi: 60, onsetSeconds: 1.1, durationSeconds: 1.0, velocity: 0.8, confidence: 0.9, staffHint: .treble)
         ]
-        
-        let candidate = NoteHelpers.findMergeCandidate(for: notes[0], in: notes, currentIndex: 0)
-        #expect(candidate == 1)
+
+        #expect(NoteHelpers.findMergeCandidate(for: notes[0], in: notes, currentIndex: 0) == nil)
+        #expect(NoteHelpers.findMergeCandidate(for: notes[1], in: notes, currentIndex: 1) == nil)
     }
     
     @Test func pianoRollLabelPositionsMatchFrames() {
