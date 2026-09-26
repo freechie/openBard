@@ -45,13 +45,24 @@ struct ContentView: View {
     }
 
     var body: some View {
-        Group {
-            if let transcription {
-                editorBody(transcription)
-            } else {
-                Text("Failed to create blank roll")
-                    .foregroundColor(theme.danger)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+        GeometryReader { proxy in
+            let canvas = proxy.size
+            ZStack {
+                Group {
+                    if let transcription {
+                        editorBody(transcription)
+                    } else {
+                        Text("Failed to create blank roll")
+                            .foregroundColor(theme.danger)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .frame(width: canvas.width, height: canvas.height)
+
+                if isLibraryMenuExpanded {
+                    libraryWindow
+                        .frame(width: canvas.width, height: canvas.height)
+                }
             }
         }
         .padding(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
@@ -74,13 +85,6 @@ struct ContentView: View {
             workspaceStage(transcription)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .layoutPriority(1)
-                .overlay {
-                    if isLibraryMenuExpanded {
-                        libraryModal
-                            .transition(.opacity)
-                    }
-                }
-                .animation(.easeInOut(duration: 0.18), value: isLibraryMenuExpanded)
 
             statusFooter
         }
@@ -204,10 +208,10 @@ struct ContentView: View {
         .accessibilityIdentifier("library-menu")
     }
 
-    private var libraryModal: some View {
+    /// Same size as the editor underneath. The card is centered in that rect and does not join the roll's stack.
+    private var libraryWindow: some View {
         ZStack {
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
+            Color.black.opacity(0.28)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     isLibraryMenuExpanded = false
@@ -217,7 +221,7 @@ struct ContentView: View {
 
             libraryMenu
                 .frame(maxWidth: 420)
-                .shadow(color: Color.black.opacity(0.45), radius: 22, x: 0, y: 12)
+                .shadow(color: Color.black.opacity(0.35), radius: 24, x: 0, y: 10)
                 .padding(24)
         }
         .accessibilityAddTraits(.isModal)
