@@ -1,6 +1,7 @@
+import tempfile
 from contextlib import asynccontextmanager, suppress
-from io import BytesIO
 from pathlib import Path
+from typing import BinaryIO
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -13,6 +14,8 @@ from app.models import TranscriptionResult
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEMO_AUDIO_PATH = REPO_ROOT / "fixtures" / "c-major-chord.wav"
 ALLOWED_AUDIO_SUFFIXES = {".wav", ".mp3", ".m4a", ".caf", ".aac"}
+MAX_UPLOAD_BYTES = 32 * 1024 * 1024
+_UPLOAD_CHUNK_BYTES = 1024 * 1024
 
 _transcriber = BasicPitchTranscriber()
 
@@ -54,9 +57,28 @@ def transcribe_audio(audio: UploadFile = File(...)) -> TranscriptionResult:
     if suffix not in ALLOWED_AUDIO_SUFFIXES:
         raise HTTPException(status_code=400, detail="Unsupported audio type")
 
-    payload = BytesIO(audio.file.read())
-    payload.name = audio.filename or f"upload{suffix}"
+    tmp_path: Path | None = None
     try:
-        return _transcriber.transcribe(payload)
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+            _copy_upload(audio, tmp)
+        return _transcriber.transcribe(tmp_path)
+    except HTTPException:
+        raise
     except TranscriptionError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+    finally:
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
+
+
+def _copy_upload(upload: UploadFile, destination: BinaryIO) -> None:
+    total = 0
+    while True:
+        chunk = upload.file.read(_UPLOAD_CHUNK_BYTES)
+        if not chunk:
+            return
+        total += len(chunk)
+        if total > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="Audio file is too large")
+        destination.write(chunk)

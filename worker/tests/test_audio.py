@@ -43,3 +43,15 @@ def test_transcribe_rejects_unsupported_type() -> None:
     )
 
     assert response.status_code == 400
+    assert response.json() == {"detail": "Unsupported audio type"}
+
+
+def test_transcribe_rejects_oversized_upload(monkeypatch) -> None:
+    monkeypatch.setattr("app.main.MAX_UPLOAD_BYTES", 8)
+    response = client.post(
+        "/v1/transcriptions",
+        files={"audio": ("too-big.wav", b"0123456789abcdef", "audio/wav")},
+    )
+
+    assert response.status_code == 413
+    assert response.json() == {"detail": "Audio file is too large"}

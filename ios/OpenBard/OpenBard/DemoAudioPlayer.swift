@@ -63,10 +63,10 @@ final class DemoAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
     }
 
     func playNotes(_ notes: [NoteEvent], name: String = "Notes") async throws {
-        let wav = try NoteAudioRenderer.makeWAVData(from: notes)
+        let wav = try await Self.renderWAV(notes)
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("openbard-notes-\(UUID().uuidString).wav")
-        try wav.write(to: url)
+        try await Self.writeWAV(wav, to: url)
         if let previous = notesTempURL {
             try? FileManager.default.removeItem(at: previous)
         }
@@ -116,6 +116,18 @@ final class DemoAudioPlayer: NSObject, ObservableObject, AVAudioPlayerDelegate {
         pendingDeactivation = Task { @MainActor in
             await self.deactivateIfCurrent(generation)
         }
+    }
+
+    nonisolated private static func renderWAV(_ notes: [NoteEvent]) async throws -> Data {
+        try await Task.detached(priority: .userInitiated) {
+            try NoteAudioRenderer.makeWAVData(from: notes)
+        }.value
+    }
+
+    nonisolated private static func writeWAV(_ wav: Data, to url: URL) async throws {
+        try await Task.detached(priority: .userInitiated) {
+            try wav.write(to: url)
+        }.value
     }
 
     nonisolated private static func prepareAndStart(_ audioPlayer: AVAudioPlayer) async -> Bool {

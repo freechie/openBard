@@ -28,6 +28,33 @@ struct WorkerClientTests {
         }
     }
 
+    @Test func writeMultipartFileStreamsSourceBytes() throws {
+        let source = FileManager.default.temporaryDirectory
+            .appendingPathComponent("openbard-multipart-source-\(UUID().uuidString).wav")
+        let destination = FileManager.default.temporaryDirectory
+            .appendingPathComponent("openbard-multipart-body-\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: source)
+            try? FileManager.default.removeItem(at: destination)
+        }
+        let payload = Data("wav-bytes".utf8)
+        try payload.write(to: source)
+
+        try WorkerClient.writeMultipartFile(
+            source: source,
+            filename: "c-major-chord.wav",
+            boundary: "Boundary-test",
+            to: destination
+        )
+
+        let body = String(decoding: try Data(contentsOf: destination), as: UTF8.self)
+        #expect(body.contains("name=\"audio\""))
+        #expect(body.contains("filename=\"c-major-chord.wav\""))
+        #expect(body.contains("audio/wav"))
+        #expect(body.contains("wav-bytes"))
+        #expect(body.contains("--Boundary-test--"))
+    }
+
     @Test func makeRequestPostsMultipartAudioField() {
         let base = URL(string: WorkerSettings.defaultBaseURLString)!
         let request = WorkerClient.makeRequest(
