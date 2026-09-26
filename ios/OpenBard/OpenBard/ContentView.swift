@@ -436,7 +436,7 @@ struct ContentView: View {
                         foreground: theme.accent.opacity(0.85),
                         label: "Merge",
                         id: "merge-button",
-                        disabled: selectedNoteIndex == nil
+                        disabled: !canMergeSelectedNote(in: transcription)
                     ) {
                         if let index = selectedNoteIndex {
                             mergeNote(at: index)
@@ -747,41 +747,37 @@ struct ContentView: View {
         selectedNoteIndex = index + 1
     }
 
+    private func canMergeSelectedNote(in transcription: TranscriptionResult) -> Bool {
+        guard let index = selectedNoteIndex,
+              transcription.noteEvents.indices.contains(index) else {
+            return false
+        }
+        return NoteHelpers.findMergeCandidate(
+            for: transcription.noteEvents[index],
+            in: transcription.noteEvents,
+            currentIndex: index
+        ) != nil
+    }
+
     private func mergeNote(at index: Int) {
         guard var trans = transcription else { return }
-        guard index < trans.noteEvents.count else { return }
+        guard trans.noteEvents.indices.contains(index) else { return }
         let note = trans.noteEvents[index]
+        guard let mergeIndex = NoteHelpers.findMergeCandidate(
+            for: note,
+            in: trans.noteEvents,
+            currentIndex: index
+        ) else { return }
+        guard let mergedNote = NoteHelpers.mergeNotes(note, trans.noteEvents[mergeIndex]) else {
+            return
+        }
 
-        let mergeCandidateIndex = trans.noteEvents.enumerated().first { otherIndex, otherNote in
-            otherIndex != index &&
-            otherNote.pitchMidi == note.pitchMidi &&
-            abs(otherNote.onsetSeconds - (note.onsetSeconds + note.durationSeconds)) < 0.05
-        }?.offset
-
-        guard let mergeIndex = mergeCandidateIndex else { return }
-
-        let otherNote = trans.noteEvents[mergeIndex]
-        let earlierIndex = note.onsetSeconds < otherNote.onsetSeconds ? index : mergeIndex
-        let laterIndex = note.onsetSeconds < otherNote.onsetSeconds ? mergeIndex : index
-        let earlierNote = trans.noteEvents[earlierIndex]
-        let laterNote = trans.noteEvents[laterIndex]
-
-        let mergedNote = NoteEvent(
-            pitchMidi: earlierNote.pitchMidi,
-            onsetSeconds: earlierNote.onsetSeconds,
-            durationSeconds: (laterNote.onsetSeconds + laterNote.durationSeconds) - earlierNote.onsetSeconds,
-            velocity: max(earlierNote.velocity, laterNote.velocity),
-            confidence: max(earlierNote.confidence, laterNote.confidence),
-            onsetUncertaintySeconds: earlierNote.onsetUncertaintySeconds,
-            staffHint: earlierNote.staffHint,
-            isLocked: false
-        )
-
-        trans.noteEvents.remove(at: max(earlierIndex, laterIndex))
-        trans.noteEvents.remove(at: min(earlierIndex, laterIndex))
-        trans.noteEvents.insert(mergedNote, at: min(earlierIndex, laterIndex))
+        let insertIndex = min(index, mergeIndex)
+        trans.noteEvents.remove(at: max(index, mergeIndex))
+        trans.noteEvents.remove(at: min(index, mergeIndex))
+        trans.noteEvents.insert(mergedNote, at: insertIndex)
         transcription = trans
-        selectedNoteIndex = min(earlierIndex, laterIndex)
+        selectedNoteIndex = insertIndex
     }
 }
 
