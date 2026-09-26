@@ -40,14 +40,19 @@ struct PianoRollView: View {
         GeometryReader { geometry in
             Canvas { context, size in
                 let metrics = PianoRollLayout.metrics(viewport: viewport, in: size)
+                let frames = PianoRollLayout.frames(
+                    notes: notes,
+                    viewport: viewport,
+                    timeWindow: timeWindow,
+                    in: size
+                )
                 drawBackground(context: context, size: size, metrics: metrics)
                 drawPianoKeys(context: context, size: size, metrics: metrics)
                 drawTimeRuler(context: context, size: size, metrics: metrics)
                 drawGrid(context: context, size: size, metrics: metrics)
-                drawNotes(context: context, size: size)
-                drawVelocityLane(context: context, size: size, metrics: metrics)
+                drawNotes(context: context, frames: frames)
+                drawVelocityLane(context: context, size: size, metrics: metrics, frames: frames)
             }
-            .id(canvasIdentity)
             .background(theme.pianoRollBackground)
             .contentShape(Rectangle())
             .highPriorityGesture(interactionGesture(in: geometry.size))
@@ -56,17 +61,6 @@ struct PianoRollView: View {
             .accessibilityLabel("Piano roll with \(notes.count) notes")
             .accessibilityIdentifier("piano-roll")
         }
-    }
-
-    private var canvasIdentity: String {
-        notes.map { note in
-            "\(note.pitchMidi)-\(note.onsetSeconds)-\(note.durationSeconds)-\(note.velocity)"
-        }
-        .joined(separator: "|")
-        + "|sel:\(selectedNoteIndex.map(String.init) ?? "nil")"
-        + "|vp:\(viewport.minPitch)-\(viewport.maxPitch)-\(viewport.timelineSeconds)"
-        + "|tw:\(timeWindow.visibleStart)-\(timeWindow.visibleDuration)-\(timeWindow.contentSeconds)"
-        + "|draw:\(isDrawMode)"
     }
 
     private var magnifyGesture: some Gesture {
@@ -168,44 +162,59 @@ struct PianoRollView: View {
     }
 
     private func drawGrid(context: GraphicsContext, size: CGSize, metrics: PianoRollLayout.Metrics) {
+        var rows = Path()
         for i in 0...viewport.pitchSpan {
             let y = metrics.contentMinY + CGFloat(i) * metrics.rowHeight
-            let path = Path { p in
-                p.move(to: CGPoint(x: metrics.labelGutter, y: y))
-                p.addLine(to: CGPoint(x: size.width - metrics.trailingInset, y: y))
-            }
-            context.stroke(path, with: .color(theme.gridLine), lineWidth: 0.5)
+            rows.move(to: CGPoint(x: metrics.labelGutter, y: y))
+            rows.addLine(to: CGPoint(x: size.width - metrics.trailingInset, y: y))
         }
+        context.stroke(rows, with: .color(theme.gridLine), lineWidth: 0.5)
 
         let tempo = tempoBpm ?? NoteHelpers.defaultTempoBpm
         let stepSeconds = (60.0 / tempo) / 4.0
+        let spacing = CGFloat(stepSeconds / max(timeWindow.visibleDuration, 0.001)) * metrics.drawableWidth
+        let strideSteps = Self.gridStrideSteps(spacing: spacing)
         let startStep = Int(floor(timeWindow.visibleStart / stepSeconds))
         let endStep = Int(ceil(timeWindow.visibleEnd / stepSeconds))
-        for step in startStep...endStep {
-            let t = Double(step) * stepSeconds
-            guard t >= timeWindow.visibleStart - 0.0001, t <= timeWindow.visibleEnd + 0.0001 else { continue }
-            let x = metrics.labelGutter
-                + CGFloat((t - timeWindow.visibleStart) / timeWindow.visibleDuration) * metrics.drawableWidth
-            let isBeat = step % 4 == 0
-            let path = Path { p in
-                p.move(to: CGPoint(x: x, y: metrics.contentMinY))
-                p.addLine(to: CGPoint(x: x, y: metrics.velocityMinY))
-            }
-            context.stroke(
-                path,
-                with: .color(theme.gridLine.opacity(isBeat ? 1 : 0.45)),
-                lineWidth: isBeat ? 0.8 : 0.4
-            )
+        var step = startStep
+        if strideSteps > 1 {
+            let remainder = ((step % strideSteps) + strideSteps) % strideSteps
+            step -= remainder
         }
+
+        var beatLines = Path()
+        var subdivisionLines = Path()
+        while step <= endStep {
+            let t = Double(step) * stepSeconds
+            if t >= timeWindow.visibleStart - 0.0001, t <= timeWindow.visibleEnd + 0.0001 {
+                let x = metrics.labelGutter
+                    + CGFloat((t - timeWindow.visibleStart) / timeWindow.visibleDuration) * metrics.drawableWidth
+                if step % 4 == 0 {
+                    beatLines.move(to: CGPoint(x: x, y: metrics.contentMinY))
+                    beatLines.addLine(to: CGPoint(x: x, y: metrics.velocityMinY))
+                } else {
+                    subdivisionLines.move(to: CGPoint(x: x, y: metrics.contentMinY))
+                    subdivisionLines.addLine(to: CGPoint(x: x, y: metrics.velocityMinY))
+                }
+            }
+            step += strideSteps
+        }
+        context.stroke(subdivisionLines, with: .color(theme.gridLine.opacity(0.45)), lineWidth: 0.4)
+        context.stroke(beatLines, with: .color(theme.gridLine), lineWidth: 0.8)
     }
 
-    private func drawNotes(context: GraphicsContext, size: CGSize) {
-        let frames = PianoRollLayout.frames(
-            notes: notes,
-            viewport: viewport,
-            timeWindow: timeWindow,
-            in: size
-        )
+    /// Drop 16ths, then beats, once a step is thinner than a point.
+    private static func gridStrideSteps(spacing: CGFloat) -> Int {
+        if spacing >= 1 {
+            return 1
+        }
+        if spacing * 4 >= 1 {
+            return 4
+        }
+        return 16
+    }
+
+    private func drawNotes(context: GraphicsContext, frames: [CGRect]) {
         for (index, frame) in frames.enumerated() {
             guard frame.width > 0.5 else { continue }
             let note = notes[index]
@@ -226,7 +235,12 @@ struct PianoRollView: View {
         }
     }
 
-    private func drawVelocityLane(context: GraphicsContext, size: CGSize, metrics: PianoRollLayout.Metrics) {
+    private func drawVelocityLane(
+        context: GraphicsContext,
+        size: CGSize,
+        metrics: PianoRollLayout.Metrics,
+        frames: [CGRect]
+    ) {
         context.stroke(
             Path(CGRect(x: 0, y: metrics.velocityMinY, width: size.width, height: 0.5)),
             with: .color(theme.border),
@@ -240,12 +254,6 @@ struct PianoRollView: View {
             anchor: .center
         )
 
-        let frames = PianoRollLayout.frames(
-            notes: notes,
-            viewport: viewport,
-            timeWindow: timeWindow,
-            in: size
-        )
         for (index, frame) in frames.enumerated() {
             guard frame.width > 0.5 else { continue }
             let note = notes[index]
@@ -471,15 +479,17 @@ enum PianoRollLayout {
         var velocityHeight: CGFloat
     }
 
+    private static let pitchClassNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+    private static let blackKeyPitchClasses: Set<Int> = [1, 3, 6, 8, 10]
+
     static func pitchName(midi: Int) -> String {
-        let names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-        let name = names[((midi % 12) + 12) % 12]
+        let pitchClass = ((midi % 12) + 12) % 12
         let octave = midi / 12 - 1
-        return "\(name)\(octave)"
+        return "\(pitchClassNames[pitchClass])\(octave)"
     }
 
     static func isBlackKey(midi: Int) -> Bool {
-        [1, 3, 6, 8, 10].contains(((midi % 12) + 12) % 12)
+        blackKeyPitchClasses.contains(((midi % 12) + 12) % 12)
     }
 
     static func recommendedHeight(for viewport: PianoRollViewport, floor: CGFloat = 200) -> CGFloat {

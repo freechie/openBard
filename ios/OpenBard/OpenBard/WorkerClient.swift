@@ -65,21 +65,51 @@ enum WorkerClient {
         session: URLSession = .shared
     ) async throws -> Data {
         let filename = fileURL.lastPathComponent
-        let fileData = try await Task.detached {
-            try Data(contentsOf: fileURL)
-        }.value
+        let boundary = "Boundary-\(UUID().uuidString)"
+        let bodyURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("openbard-upload-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: bodyURL) }
+        try writeMultipartFile(source: fileURL, filename: filename, boundary: boundary, to: bodyURL)
 
-        let request = makeRequest(fileData: fileData, filename: filename, baseURL: baseURL)
+        var request = URLRequest(url: transcriptionURL(from: baseURL))
+        request.httpMethod = "POST"
+        request.timeoutInterval = requestTimeout
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(for: request)
+            (data, response) = try await session.upload(for: request, fromFile: bodyURL)
         } catch let error as CancellationError {
             throw error
         } catch {
             throw WorkerError.unreachable(baseURL)
         }
         return try validateResponse(data: data, response: response)
+    }
+
+    static func writeMultipartFile(source: URL, filename: String, boundary: String, to destination: URL) throws {
+        FileManager.default.createFile(atPath: destination.path, contents: nil)
+        let output = try FileHandle(forWritingTo: destination)
+        defer { try? output.close() }
+        let safeName = filename.replacingOccurrences(of: "\"", with: "")
+        try writeUTF8("--\(boundary)\r\n", to: output)
+        try writeUTF8(
+            "Content-Disposition: form-data; name=\"audio\"; filename=\"\(safeName)\"\r\n",
+            to: output
+        )
+        try writeUTF8("Content-Type: \(mimeType(forFilename: safeName))\r\n\r\n", to: output)
+
+        let input = try FileHandle(forReadingFrom: source)
+        defer { try? input.close() }
+        while let chunk = try input.read(upToCount: 64 * 1024), !chunk.isEmpty {
+            try output.write(contentsOf: chunk)
+        }
+        try writeUTF8("\r\n--\(boundary)--\r\n", to: output)
+    }
+
+    private static func writeUTF8(_ string: String, to handle: FileHandle) throws {
+        try handle.write(contentsOf: Data(string.utf8))
     }
 
     static func makeRequest(fileData: Data, filename: String, baseURL: URL) -> URLRequest {

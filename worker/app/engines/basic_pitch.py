@@ -26,6 +26,7 @@ class BasicPitchTranscriber(Transcriber):
 
     def __init__(self) -> None:
         self._model: object | None = None
+        self._engine_version: str | None = None
 
     def load_model(self) -> object:
         if self._model is not None:
@@ -73,7 +74,9 @@ class BasicPitchTranscriber(Transcriber):
 
     @property
     def engine_version(self) -> str:
-        return version("basic-pitch")
+        if self._engine_version is None:
+            self._engine_version = version("basic-pitch")
+        return self._engine_version
 
     def _as_path(self, audio_file: Path | BinaryIO) -> tuple[Path, Path | None]:
         if isinstance(audio_file, Path):
