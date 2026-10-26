@@ -12,13 +12,16 @@ repo_root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
   # fixed in protobuf 5.29.6 / 6.33.5 only. The worker does not parse untrusted
   # protobuf JSON through json_format.ParseDict.
   #
-  # PYSEC-2026-3447 (setuptools <83 MANIFEST.in NFC/NFD exclude bypass) is
-  # fixed in setuptools 83+, but that release drops pkg_resources and breaks
-  # resampy, which basic-pitch needs. Pin stays setuptools>=75,<81. Worker does not build
-  # sdists with setuptools FileList.
+  # PYSEC-2026-3447 (setuptools <83 MANIFEST.in NFC/NFD exclude bypass) and
+  # GHSA-xmj3-9gf7-h52w (setuptools <84.1.0 Windows path escape in
+  # Wheel.install_as_egg) are fixed only in setuptools releases that drop
+  # pkg_resources and break resampy, which basic-pitch needs. Pin stays
+  # setuptools>=75,<81. The worker does not build sdists or install wheels
+  # as eggs.
   uvx --from pip-audit pip-audit --path .venv/lib/python3.11/site-packages \
     --ignore-vuln PYSEC-2026-1805 \
-    --ignore-vuln PYSEC-2026-3447
+    --ignore-vuln PYSEC-2026-3447 \
+    --ignore-vuln GHSA-xmj3-9gf7-h52w
   uvx bandit -q -r app
 )
 
