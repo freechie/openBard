@@ -16,6 +16,9 @@ struct ContentView: View {
     @State private var timeWindow: PianoRollTimeWindow = .blank()
     @State private var isDrawMode = true
     @State private var isTranscribing = false
+    @State private var preparedScore: Score?
+    @State private var preparedMIDI: Data?
+    @State private var preparedMusicXML: Data?
     @AppStorage(WorkerSettings.storageKey) private var workerBaseURLString = WorkerSettings.defaultBaseURLString
 
     init() {
@@ -44,33 +47,31 @@ struct ContentView: View {
     var body: some View {
         Group {
             if let transcription {
-                GeometryReader { geo in
-                    let landscape = geo.size.width > geo.size.height * 1.05
-                    if landscape {
-                        landscapeBody(transcription)
-                    } else {
-                        portraitBody(transcription)
-                    }
-                }
+                editorBody(transcription)
             } else {
                 Text("Failed to create blank roll")
                     .foregroundColor(theme.danger)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
         .background(theme.background)
         .foregroundColor(theme.textPrimary)
-        .fileImporter(
-            isPresented: $isImporterPresented,
-            allowedContentTypes: [.audio, .wav, .mpeg4Audio, .mp3],
-            allowsMultipleSelection: false
-        ) { result in
-            importAudio(result)
+        .fullScreenCover(isPresented: $isLibraryMenuExpanded) {
+            libraryWindow
+                .presentationBackground(.clear)
+                .fileImporter(
+                    isPresented: $isImporterPresented,
+                    allowedContentTypes: [.audio, .wav, .mpeg4Audio, .mp3],
+                    allowsMultipleSelection: false
+                ) { result in
+                    importAudio(result)
+                }
         }
     }
 
-    private func portraitBody(_ transcription: TranscriptionResult) -> some View {
+    private func editorBody(_ transcription: TranscriptionResult) -> some View {
         VStack(spacing: 10) {
             topBar(transcription)
             workspacePicker
@@ -79,37 +80,8 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .layoutPriority(1)
 
-            if isLibraryMenuExpanded {
-                libraryMenu
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-
             statusFooter
         }
-        .animation(.easeInOut(duration: 0.2), value: isLibraryMenuExpanded)
-    }
-
-    private func landscapeBody(_ transcription: TranscriptionResult) -> some View {
-        VStack(spacing: 10) {
-            topBar(transcription)
-            workspacePicker
-
-            HStack(alignment: .top, spacing: 12) {
-                workspaceStage(transcription)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                if isLibraryMenuExpanded {
-                    libraryMenu
-                        .frame(maxWidth: 280)
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .layoutPriority(1)
-
-            statusFooter
-        }
-        .animation(.easeInOut(duration: 0.2), value: isLibraryMenuExpanded)
     }
 
     @ViewBuilder
@@ -221,7 +193,7 @@ struct ContentView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.pianoRollBackground)
+        .background(theme.surfaceElevated)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
@@ -230,8 +202,29 @@ struct ContentView: View {
         .accessibilityIdentifier("library-menu")
     }
 
+    /// Overlay content is not part of the editor's height, so the roll keeps the size it has when this is hidden.
+    private var libraryWindow: some View {
+        ZStack {
+            Color.black.opacity(0.28)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isLibraryMenuExpanded = false
+                }
+                .accessibilityLabel("Dismiss library")
+                .accessibilityIdentifier("library-menu-scrim")
+
+            libraryMenu
+                .frame(maxWidth: 420)
+                .fixedSize(horizontal: false, vertical: true)
+                .shadow(color: Color.black.opacity(0.35), radius: 24, x: 0, y: 10)
+                .padding(24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityAddTraits(.isModal)
+    }
+
     private var workspacePicker: some View {
-        Picker("Workspace", selection: $workspace) {
+        Picker("Workspace", selection: workspaceSelection) {
             ForEach(Workspace.allCases) { mode in
                 Text(mode.rawValue).tag(mode)
             }
@@ -241,6 +234,35 @@ struct ContentView: View {
         .onChange(of: workspace) { _, _ in
             selectedNoteIndex = nil
             isDraggingNote = false
+        }
+    }
+
+    private var workspaceSelection: Binding<Workspace> {
+        Binding(
+            get: { workspace },
+            set: { newValue in
+                if newValue == .score, let transcription {
+                    refreshScoreExports(for: transcription)
+                }
+                workspace = newValue
+            }
+        )
+    }
+
+    private func refreshScoreExports(for transcription: TranscriptionResult) {
+        let score = ScoreBuilder.build(
+            from: transcription.noteEvents,
+            tempoBpm: transcription.tempoBpm
+        )
+        preparedScore = score
+        preparedMIDI = try? MIDIExporter.makeData(
+            from: transcription.noteEvents,
+            tempoBpm: transcription.tempoBpm
+        )
+        if let score {
+            preparedMusicXML = try? MusicXMLExporter.makeData(from: score)
+        } else {
+            preparedMusicXML = nil
         }
     }
 
@@ -280,7 +302,7 @@ struct ContentView: View {
 
     private func scoreWorkspace(_ transcription: TranscriptionResult) -> some View {
         VStack(spacing: 8) {
-            scoreSection(transcription)
+            scoreSection()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             toolStrip(transcription, mode: .score)
             Text("Score builds from all notes on the roll. Edit timing in Piano roll.")
@@ -447,10 +469,7 @@ struct ContentView: View {
                         }
                     }
                 } else {
-                    if let midiData = try? MIDIExporter.makeData(
-                        from: transcription.noteEvents,
-                        tempoBpm: transcription.tempoBpm
-                    ) {
+                    if let midiData = preparedMIDI {
                         ShareLink(
                             item: MIDIFileDocument(data: midiData),
                             preview: SharePreview("openBard.mid")
@@ -465,10 +484,7 @@ struct ContentView: View {
                         .accessibilityIdentifier("export-midi")
                     }
 
-                    if let musicXMLData = try? MusicXMLExporter.makeData(
-                        from: transcription.noteEvents,
-                        tempoBpm: transcription.tempoBpm
-                    ) {
+                    if let musicXMLData = preparedMusicXML {
                         ShareLink(
                             item: MusicXMLFileDocument(data: musicXMLData),
                             preview: SharePreview("openBard.musicxml")
@@ -520,12 +536,9 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private func scoreSection(_ transcription: TranscriptionResult) -> some View {
+    private func scoreSection() -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            if let score = ScoreBuilder.build(
-                from: transcription.noteEvents,
-                tempoBpm: transcription.tempoBpm
-            ) {
+            if let score = preparedScore {
                 Text(StaffLayout.summary(for: score))
                     .font(.caption)
                     .foregroundColor(theme.textSecondary)
@@ -585,6 +598,9 @@ struct ContentView: View {
         )
         pianoRollViewport = seeded
         timeWindow = .from(contentSeconds: seeded.timelineSeconds, tempoBpm: loaded.tempoBpm)
+        if workspace == .score {
+            refreshScoreExports(for: loaded)
+        }
     }
 
     private func createBlankRoll() {

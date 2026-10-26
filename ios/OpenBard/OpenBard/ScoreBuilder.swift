@@ -96,14 +96,19 @@ enum ScoreBuilder {
         let endBeat = slices.map { $0.startBeat + $0.durationBeats }.max() ?? beatsPerMeasure
         let measureCount = max(1, Int(ceil(endBeat / beatsPerMeasure - 1e-9)))
 
+        var buckets = Array(repeating: [ScoreNote](), count: measureCount)
+        for slice in slices {
+            let index = Int(floor((slice.startBeat + 1e-9) / beatsPerMeasure))
+            guard buckets.indices.contains(index) else { continue }
+            buckets[index].append(slice)
+        }
+
         return (0..<measureCount).map { index in
             let origin = Double(index) * beatsPerMeasure
-            let inMeasure = slices
-                .filter { $0.startBeat >= origin - 1e-9 && $0.startBeat < origin + beatsPerMeasure - 1e-9 }
-                .sorted { lhs, rhs in
-                    if lhs.startBeat != rhs.startBeat { return lhs.startBeat < rhs.startBeat }
-                    return lhs.pitchMidi < rhs.pitchMidi
-                }
+            let inMeasure = buckets[index].sorted { lhs, rhs in
+                if lhs.startBeat != rhs.startBeat { return lhs.startBeat < rhs.startBeat }
+                return lhs.pitchMidi < rhs.pitchMidi
+            }
             let voices = assignVoices(inMeasure).enumerated().map { offset, voiceNotes in
                 ScoreVoice(
                     number: offset + 1,

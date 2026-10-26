@@ -90,12 +90,15 @@ enum NoteAudioRenderer {
         appendASCII("data")
         appendU32(UInt32(dataSize))
 
-        for sample in samples {
-            let clamped = max(-1.0, min(1.0, Double(sample)))
-            let intSample = Int16((clamped * Double(Int16.max)).rounded())
-            var le = intSample.littleEndian
-            withUnsafeBytes(of: &le) { data.append(contentsOf: $0) }
+        var pcm = Data(count: dataSize)
+        pcm.withUnsafeMutableBytes { raw in
+            guard let dest = raw.bindMemory(to: Int16.self).baseAddress else { return }
+            for (index, sample) in samples.enumerated() {
+                let clamped = max(-1.0, min(1.0, Double(sample)))
+                dest[index] = Int16((clamped * Double(Int16.max)).rounded()).littleEndian
+            }
         }
+        data.append(pcm)
         return data
     }
 }
